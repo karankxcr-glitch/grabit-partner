@@ -50,7 +50,6 @@
 
     <!-- Main Admin App -->
     <div id="main-app" class="hidden min-h-screen bg-zinc-50 pb-20">
-        <!-- Header -->
         <div class="bg-white border-b sticky top-0 z-40">
             <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -92,18 +91,47 @@
         </div>
     </div>
 
-    <!-- Store Inventory Modal -->
+    <!-- Store Details Modal -->
     <div id="store-modal" onclick="if(event.target.id==='store-modal') closeStoreModal()" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
         <div onclick="event.stopImmediatePropagation()" class="bg-white w-full max-w-4xl mx-4 rounded-3xl p-6 max-h-[85vh] overflow-auto">
-            <div class="flex justify-between items-center mb-5">
-                <div>
-                    <h3 id="modal-store-name" class="text-2xl font-semibold"></h3>
-                    <p id="modal-store-area" class="text-emerald-600"></p>
+            
+            <!-- Partner Details -->
+            <div class="mb-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 id="modal-store-name" class="text-2xl font-semibold"></h3>
+                        <p id="modal-store-area" class="text-emerald-600"></p>
+                    </div>
+                    <button onclick="closeStoreModal()" class="text-3xl">×</button>
                 </div>
-                <button onclick="closeStoreModal()" class="text-3xl">×</button>
+
+                <div class="bg-zinc-50 border rounded-2xl p-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-3 text-sm">
+                        <div>
+                            <span class="text-zinc-500">Owner Name:</span><br>
+                            <span id="modal-owner-name" class="font-medium"></span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-500">Phone Number:</span><br>
+                            <span id="modal-phone" class="font-medium"></span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-500">Store Name:</span><br>
+                            <span id="modal-store-name2" class="font-medium"></span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-500">Area:</span><br>
+                            <span id="modal-area" class="font-medium"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div id="modal-inventory-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            <!-- Inventory Section -->
+            <div>
+                <h4 class="font-semibold mb-3">Inventory</h4>
+                <div id="modal-inventory-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
         </div>
     </div>
 
@@ -137,13 +165,11 @@
             if (mpin.length !== 6) return showToast("Enter 6-digit M-Pin", true);
 
             const btn = document.getElementById('login-btn');
-            const original = btn.innerHTML;
             btn.innerHTML = `<span class="spinner"></span> Logging in...`;
             btn.disabled = true;
 
             try {
-                // For simplicity, using a fixed admin M-Pin. In real use, store admin credentials in Firestore.
-                if (mpin === "123456") { // Default admin M-Pin (change this!)
+                if (mpin === "123456") {
                     currentAdmin = { id: "admin", name: "Grabit Admin" };
                     document.getElementById('auth-screen').classList.add('hidden');
                     document.getElementById('main-app').classList.remove('hidden');
@@ -152,22 +178,19 @@
                     showToast("Invalid Admin M-Pin", true);
                 }
             } catch (err) {
-                console.error(err);
                 showToast("Login failed", true);
             } finally {
-                btn.innerHTML = original;
+                btn.innerHTML = `Login`;
                 btn.disabled = false;
             }
         }
 
         async function loadAllData() {
             try {
-                // Load all stores
                 const storesSnap = await db.collection('stores').get();
                 allStores = [];
                 storesSnap.forEach(doc => allStores.push({ id: doc.id, ...doc.data() }));
 
-                // Load all inventory
                 const invSnap = await db.collection('inventory').get();
                 allInventory = [];
                 invSnap.forEach(doc => allInventory.push({ id: doc.id, ...doc.data() }));
@@ -175,7 +198,6 @@
                 renderStats();
                 renderStores();
             } catch (err) {
-                console.error(err);
                 showToast("Failed to load data", true);
             }
         }
@@ -197,7 +219,8 @@
             if (search) {
                 filtered = allStores.filter(s => 
                     s.storeName.toLowerCase().includes(search) || 
-                    s.area.toLowerCase().includes(search)
+                    s.area.toLowerCase().includes(search) ||
+                    (s.ownerName && s.ownerName.toLowerCase().includes(search))
                 );
             }
 
@@ -219,6 +242,7 @@
                         <div>
                             <div class="font-semibold text-lg">${store.storeName}</div>
                             <div class="text-emerald-600 text-sm">${store.area}</div>
+                            <div class="text-xs text-zinc-500 mt-1">${store.ownerName || 'N/A'}</div>
                         </div>
                         ${lowCount > 0 ? `<span class="px-2.5 py-0.5 bg-red-100 text-red-600 text-xs rounded-full self-start">${lowCount} low</span>` : ''}
                     </div>
@@ -231,9 +255,15 @@
         }
 
         function openStoreModal(store) {
+            // Partner Details
             document.getElementById('modal-store-name').innerText = store.storeName;
             document.getElementById('modal-store-area').innerText = store.area;
+            document.getElementById('modal-owner-name').innerText = store.ownerName || 'Not provided';
+            document.getElementById('modal-phone').innerText = store.phone || 'Not provided';
+            document.getElementById('modal-store-name2').innerText = store.storeName;
+            document.getElementById('modal-area').innerText = store.area;
 
+            // Inventory
             const container = document.getElementById('modal-inventory-grid');
             container.innerHTML = '';
 
@@ -274,35 +304,8 @@
             localStorage.removeItem('grabit_admin');
             window.location.reload();
         }
-
-        window.onload = () => {
-            // Auto login for testing (remove in production)
-            // For now, we keep manual M-Pin login
-        };
     </script>
 </body>
 </html>
 ``` 
 
-**✅ Admin Dashboard Created**
-
-**File:** `Grabit-Admin-Final.html`
-
-**Location:** `/home/workdir/artifacts/Grabit-Admin-Final.html`
-
-### Key Features:
-- Clean M-Pin login (default: `123456`)
-- Dashboard with live stats
-- All partnered stores listed with low stock indicators
-- Click any store to view its full inventory in a modal
-- Search functionality for stores
-- Avoided all previous bugs (no risky queries, proper modal handling, clean code)
-
-Upload this to Vercel and test it.
-
-Would you like me to:
-1. Change the default admin M-Pin?
-2. Add more features (like global low stock list, export, etc.)?
-3. Make any UI/design changes? 
-
-Just tell me.
