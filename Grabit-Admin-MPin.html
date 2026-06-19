@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grabit Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .logo-font { font-family: 'Poppins', system_ui, sans-serif; font-weight: 600; }
+        .pin-input { width: 48px; height: 56px; text-align: center; font-size: 1.6rem; font-weight: 700; border: 2px solid #3f3f46; border-radius: 12px; background: #18181b; color: white; }
+        .pin-input:focus { border-color: #10b981; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white">
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-md">
+            <div class="flex justify-center mb-8">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center">
+                        <i class="fa-solid fa-shield-halved text-white text-3xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="logo-font text-4xl font-bold tracking-tighter">Grabit</h1>
+                        <p class="text-emerald-400 text-sm -mt-1">ADMIN</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-semibold">Admin Access</h2>
+                    <p class="text-zinc-400 text-sm mt-1">Enter your 6-digit Admin M-Pin</p>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm text-zinc-400 mb-2">Admin M-Pin</label>
+                    <div class="flex justify-center gap-2" id="admin-pin-inputs">
+                        <!-- 6 pin inputs -->
+                    </div>
+                </div>
+
+                <button onclick="loginAdmin()" 
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 py-4 rounded-2xl font-semibold">
+                    Login to Dashboard
+                </button>
+
+                <p class="text-center text-xs text-zinc-500 mt-6">Default demo M-Pin: 112233</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden min-h-screen bg-zinc-950">
+        <div class="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-x-4">
+                    <div class="flex items-center gap-x-3">
+                        <div class="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center">
+                            <i class="fa-solid fa-shield-halved text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="logo-font text-3xl font-bold">Grabit</span>
+                            <span class="text-emerald-400 text-sm ml-1">ADMIN</span>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="logoutAdmin()" class="px-4 py-2 text-sm border border-zinc-700 hover:bg-zinc-800 rounded-2xl">Logout</button>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 py-8">
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <h1 class="text-4xl font-semibold tracking-tight">Partner Overview</h1>
+                    <p class="text-zinc-400">All stores using M-Pin login</p>
+                </div>
+                <button onclick="refreshData()" class="flex items-center gap-x-2 px-5 py-2.5 bg-zinc-900 border border-zinc-700 rounded-2xl text-sm">
+                    <i class="fa-solid fa-sync"></i> <span>Refresh</span>
+                </button>
+            </div>
+
+            <!-- Metrics -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                    <div class="text-xs text-zinc-400">Total Stores</div>
+                    <div id="metric-stores" class="text-4xl font-bold mt-1">0</div>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                    <div class="text-xs text-zinc-400">Total SKUs</div>
+                    <div id="metric-skus" class="text-4xl font-bold mt-1">0</div>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                    <div class="text-xs text-zinc-400">Low Stock Alerts</div>
+                    <div id="metric-low" class="text-4xl font-bold mt-1 text-red-400">0</div>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                    <div class="text-xs text-zinc-400">Active Stores</div>
+                    <div id="metric-active" class="text-4xl font-bold mt-1">0</div>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <input id="search-input" type="text" placeholder="Search stores..." onkeyup="filterStores()"
+                   class="w-full bg-zinc-900 border border-zinc-700 px-5 py-3.5 rounded-2xl mb-6">
+
+            <div class="font-semibold mb-4">All Partner Stores</div>
+            <div id="stores-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+        </div>
+    </div>
+
+    <!-- Store Detail Modal -->
+    <div id="store-modal" onclick="if(event.target.id==='store-modal') hideModal()" class="hidden fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="bg-zinc-900 border border-zinc-700 w-full max-w-5xl rounded-3xl overflow-hidden">
+            <div class="px-8 py-6 border-b border-zinc-700 flex justify-between bg-zinc-950">
+                <div>
+                    <div id="modal-store-name" class="text-2xl font-semibold"></div>
+                    <div id="modal-store-area" class="text-emerald-400"></div>
+                </div>
+                <button onclick="hideModal()" class="text-3xl">×</button>
+            </div>
+            <div class="p-8 max-h-[70vh] overflow-auto">
+                <div id="modal-inventory" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY_HERE",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let allStores = [];
+        let allInventory = [];
+
+        // Admin M-Pin (for demo)
+        const ADMIN_MPIN = "112233"; // Change this to your preferred admin M-Pin
+
+        function createPinInputs() {
+            const container = document.getElementById('admin-pin-inputs');
+            container.innerHTML = '';
+            for (let i = 0; i < 6; i++) {
+                const input = document.createElement('input');
+                input.type = 'password';
+                input.maxLength = 1;
+                input.className = 'pin-input';
+                input.addEventListener('input', () => {
+                    if (input.value && i < 5) container.children[i + 1].focus();
+                });
+                container.appendChild(input);
+            }
+        }
+
+        function getPinValue() {
+            const inputs = document.getElementById('admin-pin-inputs').querySelectorAll('input');
+            return Array.from(inputs).map(i => i.value).join('');
+        }
+
+        function loginAdmin() {
+            const enteredPin = getPinValue();
+            if (enteredPin === ADMIN_MPIN) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                loadAllData();
+            } else {
+                alert("Incorrect Admin M-Pin");
+            }
+        }
+
+        function logoutAdmin() {
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('admin-pin-inputs').innerHTML = '';
+            createPinInputs();
+        }
+
+        async function loadAllData() {
+            try {
+                const storesSnap = await db.collection('stores').get();
+                allStores = [];
+                storesSnap.forEach(doc => allStores.push({ id: doc.id, ...doc.data() }));
+
+                const invSnap = await db.collection('inventory').get();
+                allInventory = [];
+                invSnap.forEach(doc => allInventory.push({ id: doc.id, ...doc.data() }));
+
+                renderDashboard();
+            } catch (error) {
+                console.error(error);
+                alert("Failed to load data from Firebase");
+            }
+        }
+
+        function renderDashboard(filteredStores = null) {
+            const grid = document.getElementById('stores-grid');
+            grid.innerHTML = '';
+            let stores = filteredStores || allStores;
+
+            // Update metrics
+            document.getElementById('metric-stores').innerText = allStores.length;
+            document.getElementById('metric-skus').innerText = allInventory.length;
+            
+            let lowStock = 0;
+            allInventory.forEach(item => {
+                if (item.qty <= (item.threshold || 5)) lowStock++;
+            });
+            document.getElementById('metric-low').innerText = lowStock;
+            document.getElementById('metric-active').innerText = allStores.length;
+
+            stores.forEach(store => {
+                const storeInv = allInventory.filter(i => i.storeId === store.id);
+                const low = storeInv.filter(i => i.qty <= (i.threshold || 5)).length;
+
+                const card = document.createElement('div');
+                card.className = 'bg-zinc-900 border border-zinc-700 rounded-3xl p-6 cursor-pointer hover:border-emerald-600';
+                card.onclick = () => showStoreModal(store);
+
+                card.innerHTML = `
+                    <div class="flex justify-between mb-4">
+                        <div>
+                            <div class="font-semibold text-xl">${store.storeName || 'Unnamed Store'}</div>
+                            <div class="text-emerald-400">${store.area || ''}</div>
+                        </div>
+                        <div class="text-xs px-3 py-1 bg-emerald-900/30 text-emerald-400 rounded-full h-fit">Active</div>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <div>Items: <span class="font-semibold">${storeInv.length}</span></div>
+                        <div class="${low > 0 ? 'text-red-400' : 'text-emerald-400'}">${low} low stock</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterStores() {
+            const term = document.getElementById('search-input').value.toLowerCase();
+            const filtered = allStores.filter(s => 
+                (s.storeName && s.storeName.toLowerCase().includes(term)) || 
+                (s.area && s.area.toLowerCase().includes(term))
+            );
+            renderDashboard(filtered);
+        }
+
+        function showStoreModal(store) {
+            const modal = document.getElementById('store-modal');
+            const invContainer = document.getElementById('modal-inventory');
+
+            document.getElementById('modal-store-name').innerText = store.storeName || 'Store';
+            document.getElementById('modal-store-area').innerText = store.area || '';
+
+            const storeInv = allInventory.filter(i => i.storeId === store.id);
+            invContainer.innerHTML = '';
+
+            if (storeInv.length === 0) {
+                invContainer.innerHTML = `<div class="col-span-2 text-center py-8 text-zinc-400">No inventory added yet.</div>`;
+            } else {
+                storeInv.forEach(item => {
+                    const isLow = item.qty <= (item.threshold || 5);
+                    const div = document.createElement('div');
+                    div.className = `p-4 rounded-2xl border ${isLow ? 'border-red-600 bg-red-950/20' : 'border-zinc-700 bg-zinc-800'}`;
+                    div.innerHTML = `
+                        <div class="flex justify-between">
+                            <div class="font-medium">${item.name}</div>
+                            ${isLow ? '<div class="text-xs px-2 py-0.5 bg-red-600 text-white rounded">LOW</div>' : ''}
+                        </div>
+                        <div class="mt-2 text-2xl font-bold">${item.qty} <span class="text-sm font-normal text-zinc-400">${item.unit}</span></div>
+                        ${item.price ? `<div class="text-xs text-zinc-400">₹${item.price}</div>` : ''}
+                    `;
+                    invContainer.appendChild(div);
+                });
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideModal() {
+            const modal = document.getElementById('store-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function refreshData() {
+            loadAllData();
+        }
+
+        function initAdmin() {
+            createPinInputs();
+            // Auto focus first pin input
+            setTimeout(() => {
+                const firstInput = document.querySelector('#admin-pin-inputs input');
+                if (firstInput) firstInput.focus();
+            }, 300);
+        }
+
+        window.onload = initAdmin;
+    </script>
+</body>
+</html>
