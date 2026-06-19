@@ -198,7 +198,7 @@
 </div>
 
 <!-- ==================== ADD / EDIT MODAL ==================== -->
-<div id="item-modal" class="hidden fixed inset-0 z-50 modal-bg bg-black/50 flex items-end md:items-center justify-center"
+<div id="item-modal" class="hidden fixed inset-0 z-50 modal-bg bg-black/50 items-end md:items-center justify-center"
      onclick="if(event.target===this) closeModal()">
     <div class="bg-white w-full md:w-[440px] md:rounded-3xl rounded-t-3xl p-6 shadow-2xl" onclick="event.stopPropagation()">
         <div class="flex justify-between items-center mb-5">
@@ -593,6 +593,7 @@ function openModal() {
     document.getElementById('m-price').value = '';
     document.getElementById('m-thresh').value = '5';
     document.getElementById('item-modal').classList.remove('hidden');
+    document.getElementById('item-modal').classList.add('flex');
     setTimeout(() => document.getElementById('m-name').focus(), 100);
 }
 
@@ -612,13 +613,12 @@ function openEditModal(id) {
     document.getElementById('m-price').value  = item.price || '';
     document.getElementById('m-thresh').value = item.threshold ?? 5;
     document.getElementById('item-modal').classList.remove('hidden');
+    document.getElementById('item-modal').classList.add('flex');
 }
-
-// ─────────────────────────────────────────────
-// MODAL — CLOSE
 // ─────────────────────────────────────────────
 function closeModal() {
     document.getElementById('item-modal').classList.add('hidden');
+    document.getElementById('item-modal').classList.remove('flex');
     editingId = null;
 }
 
