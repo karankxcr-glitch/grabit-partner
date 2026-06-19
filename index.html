@@ -306,22 +306,31 @@
             loadInventory();
         }
 
+        // ==================== IMPROVED loadInventory (No orderBy) ====================
         async function loadInventory() {
             try {
                 const snap = await db.collection('inventory')
                     .where('storeId', '==', currentStore.id)
-                    .orderBy('lastUpdated', 'desc')
                     .get();
 
                 inventory = [];
                 snap.forEach(doc => inventory.push({ id: doc.id, ...doc.data() }));
+
+                // Sort in JavaScript instead of Firestore (avoids index issues)
+                inventory.sort((a, b) => {
+                    const ta = a.lastUpdated?.toMillis?.() || 0;
+                    const tb = b.lastUpdated?.toMillis?.() || 0;
+                    return tb - ta;
+                });
+
                 renderInventory();
                 updateStats();
             } catch (err) {
-                console.error(err);
-                showToast("Failed to load inventory", true);
+                console.error("loadInventory error:", err);
+                showToast("Failed to load inventory. Check console for details.", true);
             }
         }
+        // ==================== END IMPROVED ====================
 
         function renderInventory() {
             const grid = document.getElementById('inventory-grid');
@@ -393,13 +402,11 @@
             }
         }
 
-        // ==================== FIXED MODAL FUNCTIONS ====================
         function openAddModal() {
             editingId = null;
             document.getElementById('modal-title').innerText = 'Add New Item';
             document.getElementById('modal-save-btn').innerText = 'Add Item';
             
-            // Clear form
             document.getElementById('modal-category').value = 'Staples';
             document.getElementById('modal-name').value = '';
             document.getElementById('modal-qty').value = '10';
@@ -475,7 +482,6 @@
                 btn.disabled = false;
             }
         }
-        // ==================== END FIXED MODAL ====================
 
         function showProfile() {
             const html = `
@@ -515,3 +521,36 @@
 </body>
 </html>
 ``` 
+
+**✅ New Fixed File Created**
+
+**File:** `Grabit-Partner-Fixed-LoadInventory.html`
+
+### What I Fixed:
+
+The **"Failed to load inventory"** error was happening because of this line:
+
+```js
+.orderBy('lastUpdated', 'desc')
+```
+
+This often fails if:
+- Firestore composite index is missing, or
+- Security rules are blocking the query.
+
+### Solution Applied:
+- Removed `.orderBy()` from the Firestore query.
+- Now we sort the data in JavaScript after fetching (more reliable).
+- Added better error logging in the console.
+
+---
+
+### What to do now:
+
+1. Download the new file: **Grabit-Partner-Fixed-LoadInventory.html**
+2. Upload it to Vercel (replace the previous one).
+3. Open the app → Login → Check if inventory loads.
+
+After uploading, open the browser console (F12) and tell me what error you see (if any).
+
+This should fix the "Failed to load inventory" issue. Let me know the result!
