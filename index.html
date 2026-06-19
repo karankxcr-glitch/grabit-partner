@@ -8,10 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Firebase v9 compat (same as original) -->
+    <!-- Firebase v9 compat -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }
@@ -99,11 +98,6 @@
                     <label class="text-sm font-medium text-zinc-600 block mb-1.5">Area / Locality</label>
                     <input id="su-area" type="text" placeholder="e.g. Indirapuram, Ghaziabad"
                            class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 focus:border-emerald-500 focus:outline-none rounded-2xl transition">
-                </div>
-                <div>
-                    <label class="text-sm font-medium text-zinc-600 block mb-1.5">Store Photo <span class="text-zinc-400 font-normal">(optional)</span></label>
-                    <input id="su-photo" type="file" accept="image/*"
-                           class="w-full text-sm text-zinc-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-emerald-50 file:text-emerald-700 file:font-medium file:text-xs cursor-pointer">
                 </div>
                 <div>
                     <label class="text-sm font-medium text-zinc-600 block mb-1.5">Create M-Pin <span class="text-zinc-400 font-normal">(6 digits)</span></label>
@@ -232,11 +226,6 @@
                 <input id="m-name" type="text" placeholder="e.g. Amul Butter 500g"
                        class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 focus:border-emerald-400 focus:outline-none rounded-2xl transition text-sm">
             </div>
-            <div>
-                <label class="text-sm font-medium text-zinc-600 block mb-1.5">Item Photo <span class="text-zinc-400 font-normal">(optional)</span></label>
-                <input id="m-photo" type="file" accept="image/*"
-                       class="w-full text-sm text-zinc-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-emerald-50 file:text-emerald-700 file:font-medium file:text-xs cursor-pointer">
-            </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="text-sm font-medium text-zinc-600 block mb-1.5">Quantity</label>
@@ -289,17 +278,16 @@ const firebaseConfig = {
     appId: "1:448414191552:web:8bf554047579743b43c225"
 };
 firebase.initializeApp(firebaseConfig);
-const db      = firebase.firestore();
-const storage = firebase.storage();
+const db = firebase.firestore();
 
 // ─────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────
-let store     = null;      // current store object
-let inventory = [];        // live array
-let listener  = null;      // Firestore real-time listener
-let editingId = null;      // null = add mode, string = edit mode
-let qtyDebounceTimers = {}; // per-item debounce for qty adjust
+let store     = null;
+let inventory = [];
+let listener  = null;
+let editingId = null;
+let qtyDebounceTimers = {};
 
 // ─────────────────────────────────────────────
 // TOAST
@@ -311,7 +299,8 @@ function toast(msg, type = 'success') {
     const txt  = document.getElementById('toast-msg');
     txt.textContent = msg;
     icon.className  = type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-exclamation';
-    el.className    = el.className.replace(/bg-\w+-\d+/g, '');
+    // reset bg classes
+    el.classList.remove('bg-emerald-600', 'bg-red-500');
     el.classList.add(type === 'success' ? 'bg-emerald-600' : 'bg-red-500');
     el.style.opacity   = '1';
     el.style.transform = 'translateX(-50%) translateY(0)';
@@ -336,49 +325,39 @@ function showScreen(name) {
 function setBtnLoading(btnId, labelId, loading, defaultLabel) {
     const btn   = document.getElementById(btnId);
     const label = document.getElementById(labelId);
-    btn.disabled     = loading;
-    label.innerHTML  = loading
-        ? '<span class="spinner"></span>'
-        : defaultLabel;
+    btn.disabled    = loading;
+    label.innerHTML = loading ? '<span class="spinner"></span>' : defaultLabel;
 }
 
 // ─────────────────────────────────────────────
-// AUTH — CREATE ACCOUNT
+// AUTH — CREATE ACCOUNT (no photo)
 // ─────────────────────────────────────────────
 async function createAccount() {
     const name  = document.getElementById('su-name').value.trim();
     const area  = document.getElementById('su-area').value.trim();
     const mpin  = document.getElementById('su-mpin').value;
     const mpin2 = document.getElementById('su-mpin2').value;
-    const photo = document.getElementById('su-photo').files[0];
 
-    if (!name || !area)           return toast('Store name and area are required', 'error');
-    if (mpin.length !== 6)        return toast('M-Pin must be exactly 6 digits', 'error');
-    if (!/^\d{6}$/.test(mpin))   return toast('M-Pin must be numeric', 'error');
-    if (mpin !== mpin2)           return toast('M-Pins don\'t match', 'error');
+    if (!name || !area)         return toast('Store name and area are required', 'error');
+    if (mpin.length !== 6)      return toast('M-Pin must be exactly 6 digits', 'error');
+    if (!/^\d{6}$/.test(mpin)) return toast('M-Pin must be numeric', 'error');
+    if (mpin !== mpin2)         return toast("M-Pins don't match", 'error');
 
     setBtnLoading('signup-btn', 'signup-btn-label', true);
     try {
-        let photoURL = null;
-        if (photo) {
-            const ref = storage.ref(`store_photos/${Date.now()}_${photo.name}`);
-            await ref.put(photo);
-            photoURL = await ref.getDownloadURL();
-        }
         const docRef = await db.collection('stores').add({
             storeName: name,
             area:      area,
             mpin:      mpin,
-            photoURL:  photoURL,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        store = { id: docRef.id, storeName: name, area, mpin, photoURL };
+        store = { id: docRef.id, storeName: name, area, mpin };
         persistStore();
         bootApp();
         toast('Account created! Welcome 🎉');
     } catch (err) {
-        console.error(err);
-        toast('Failed to create account. Check connection.', 'error');
+        console.error('createAccount error:', err);
+        toast('Failed to create account — check your connection', 'error');
     } finally {
         setBtnLoading('signup-btn', 'signup-btn-label', false, 'Create Account &amp; Login');
     }
@@ -582,7 +561,6 @@ function openModal() {
     document.getElementById('m-unit').value  = 'pcs';
     document.getElementById('m-price').value = '';
     document.getElementById('m-thresh').value = '5';
-    document.getElementById('m-photo').value = '';
     document.getElementById('item-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('m-name').focus(), 100);
 }
@@ -602,7 +580,6 @@ function openEditModal(id) {
     document.getElementById('m-unit').value   = item.unit || 'pcs';
     document.getElementById('m-price').value  = item.price || '';
     document.getElementById('m-thresh').value = item.threshold ?? 5;
-    document.getElementById('m-photo').value  = '';
     document.getElementById('item-modal').classList.remove('hidden');
 }
 
@@ -615,55 +592,47 @@ function closeModal() {
 }
 
 // ─────────────────────────────────────────────
-// SAVE ITEM (add or edit)
+// SAVE ITEM (add or edit) — no photo upload
 // ─────────────────────────────────────────────
 async function saveItem() {
-    const name   = document.getElementById('m-name').value.trim();
+    const name = document.getElementById('m-name').value.trim();
     if (!name) return toast('Item name is required', 'error');
 
+    // Capture editingId NOW before any async gaps can clear it
+    const isEditing = editingId;
+
     const data = {
-        category:  document.getElementById('m-cat').value,
-        name:      name,
-        qty:       parseInt(document.getElementById('m-qty').value) || 0,
-        unit:      document.getElementById('m-unit').value,
-        price:     parseFloat(document.getElementById('m-price').value) || null,
-        threshold: parseInt(document.getElementById('m-thresh').value) || 5,
-        storeId:   store.id,
+        category:    document.getElementById('m-cat').value,
+        name:        name,
+        qty:         parseInt(document.getElementById('m-qty').value)   || 0,
+        unit:        document.getElementById('m-unit').value,
+        price:       parseFloat(document.getElementById('m-price').value) || null,
+        threshold:   parseInt(document.getElementById('m-thresh').value) || 5,
+        storeId:     store.id,
         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    const photoFile = document.getElementById('m-photo').files[0];
-
     const saveBtn = document.getElementById('modal-save-btn');
     const lblEl   = document.getElementById('modal-save-label');
-    saveBtn.disabled  = true;
-    lblEl.innerHTML   = '<span class="spinner"></span>';
+    saveBtn.disabled = true;
+    lblEl.innerHTML  = '<span class="spinner"></span>';
 
     try {
-        // Upload photo first if provided
-        if (photoFile) {
-            const ref = storage.ref(`item_photos/${Date.now()}_${photoFile.name}`);
-            await ref.put(photoFile);
-            data.photoURL = await ref.getDownloadURL();
-        }
-
-        if (editingId) {
-            // EDIT: update existing
-            await db.collection('inventory').doc(editingId).update(data);
-            toast('Item updated');
+        if (isEditing) {
+            await db.collection('inventory').doc(isEditing).update(data);
+            toast('Item updated ✓');
         } else {
-            // ADD: create new
             await db.collection('inventory').add(data);
-            toast('Item added');
+            toast('Item added ✓');
         }
         closeModal();
-        // Real-time listener will auto-refresh the list
+        // onSnapshot listener auto-refreshes the list
     } catch (err) {
-        console.error(err);
-        toast('Failed to save. Check connection.', 'error');
+        console.error('saveItem error:', err);
+        toast('Save failed — check your connection', 'error');
     } finally {
-        saveBtn.disabled = false;
-        lblEl.textContent = editingId ? 'Save Changes' : 'Add Item';
+        saveBtn.disabled  = false;
+        lblEl.textContent = isEditing ? 'Save Changes' : 'Add Item';
     }
 }
 
