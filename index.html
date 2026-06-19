@@ -12,13 +12,13 @@
     <style>
         body { font-family: 'Inter', system_ui, sans-serif; }
         .logo-font { font-family: 'Poppins', system_ui, sans-serif; font-weight: 600; letter-spacing: -0.025em; }
-        .pin-input { width: 48px; height: 56px; text-align: center; font-size: 1.6rem; font-weight: 700; border: 2px solid #3f3f46; border-radius: 12px; background: white; }
+        .pin-input { width: 48px; height: 56px; text-align: center; font-size: 1.6rem; font-weight: 700; border: 2px solid #d1d5db; border-radius: 12px; background: white; }
         .pin-input:focus { border-color: #10b981; outline: none; }
         .inventory-card { transition: all 0.2s ease; }
     </style>
 </head>
 <body class="bg-zinc-50">
-    <!-- Login / Signup Screen -->
+    <!-- Auth Screen -->
     <div id="auth-screen" class="min-h-screen flex items-center justify-center px-4">
         <div class="w-full max-w-md">
             <!-- Logo -->
@@ -43,9 +43,7 @@
 
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-zinc-700 mb-2">Enter your 6-digit M-Pin</label>
-                    <div class="flex justify-center gap-2" id="login-pin-inputs">
-                        <!-- 6 inputs created by JS -->
-                    </div>
+                    <div class="flex justify-center gap-2" id="login-pin-inputs"></div>
                 </div>
 
                 <button onclick="loginWithMPin()" 
@@ -82,7 +80,6 @@
                     <div>
                         <label class="block text-sm font-medium text-zinc-700 mb-2">Create 6-digit M-Pin</label>
                         <div class="flex justify-center gap-2 mb-2" id="signup-pin-inputs"></div>
-                        <p class="text-xs text-zinc-400 text-center">Enter a 6-digit number you will remember</p>
                     </div>
 
                     <div>
@@ -217,14 +214,14 @@
 
             <div class="flex gap-3 mt-7">
                 <button onclick="hideModal()" class="flex-1 py-3 rounded-2xl border">Cancel</button>
-                <button onclick="saveItem()" id="modal-save-btn" class="flex-1 py-3 rounded-2xl bg-emerald-600 text-white font-semibold">Save</button>
+                <button onclick="saveNewItem()" id="modal-save-btn" class="flex-1 py-3 rounded-2xl bg-emerald-600 text-white font-semibold">Save</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Firebase Config - REPLACE WITH YOURS
-       const firebaseConfig = {
+        // ==================== FIREBASE CONFIG ====================
+         const firebaseConfig = {
             apiKey: "YOUR_API_KEY_HERE",
             authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
             projectId: "YOUR_PROJECT_ID",
@@ -239,19 +236,17 @@
         let currentStore = null;
         let inventory = [];
 
-        // ========== M-PIN HELPER FUNCTIONS ==========
-        function createPinInputs(containerId, length = 6) {
+        // ==================== PIN HELPER ====================
+        function createPinInputs(containerId) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
-            for (let i = 0; i < length; i++) {
+            for (let i = 0; i < 6; i++) {
                 const input = document.createElement('input');
                 input.type = 'password';
                 input.maxLength = 1;
                 input.className = 'pin-input';
                 input.addEventListener('input', () => {
-                    if (input.value && i < length - 1) {
-                        container.children[i + 1].focus();
-                    }
+                    if (input.value && i < 5) container.children[i + 1].focus();
                 });
                 container.appendChild(input);
             }
@@ -262,12 +257,7 @@
             return Array.from(inputs).map(i => i.value).join('');
         }
 
-        function clearPinInputs(containerId) {
-            const inputs = document.getElementById(containerId).querySelectorAll('input');
-            inputs.forEach(i => i.value = '');
-        }
-
-        // ========== AUTH FLOW ==========
+        // ==================== AUTH FLOW ====================
         function showLoginScreen() {
             document.getElementById('signup-card').classList.add('hidden');
             document.getElementById('login-card').classList.remove('hidden');
@@ -296,12 +286,11 @@
                 return;
             }
             if (mpin !== confirmMpin) {
-                alert("M-Pin does not match. Please try again.");
+                alert("M-Pin does not match");
                 return;
             }
 
             try {
-                // Create new store document
                 const docRef = await db.collection('stores').add({
                     storeName: storeName,
                     area: area,
@@ -322,7 +311,6 @@
                 document.getElementById('main-app').classList.remove('hidden');
                 
                 initMainApp();
-                alert("Account created successfully! Your M-Pin is set.");
             } catch (error) {
                 console.error(error);
                 alert("Failed to create account. Please try again.");
@@ -345,7 +333,6 @@
                     return;
                 }
 
-                // Take the first matching store
                 const doc = snapshot.docs[0];
                 currentStore = {
                     id: doc.id,
@@ -364,7 +351,7 @@
             }
         }
 
-        // ========== MAIN APP ==========
+        // ==================== MAIN APP ====================
         function initMainApp() {
             if (!currentStore) return;
 
@@ -451,7 +438,6 @@
             document.getElementById('stat-total').innerText = inventory.length;
             const lowStock = inventory.filter(i => i.qty <= (i.threshold || 5)).length;
             document.getElementById('stat-low').innerText = lowStock;
-            document.getElementById('stat-updated').innerText = 'Just now';
         }
 
         async function adjustQuantity(id, delta) {
@@ -475,9 +461,7 @@
         function showAddModal() {
             document.getElementById('modal-title').innerText = 'Add New Item';
             document.getElementById('modal-save-btn').innerText = 'Add Item';
-            document.getElementById('modal-save-btn').onclick = () => saveNewItem();
             
-            // Clear fields
             document.getElementById('modal-name').value = '';
             document.getElementById('modal-qty').value = '10';
             document.getElementById('modal-price').value = '45';
@@ -492,8 +476,7 @@
 
             document.getElementById('modal-title').innerText = 'Edit Item';
             document.getElementById('modal-save-btn').innerText = 'Save Changes';
-            document.getElementById('modal-save-btn').onclick = () => updateItem(id);
-
+            
             document.getElementById('modal-category').value = item.category;
             document.getElementById('modal-name').value = item.name;
             document.getElementById('modal-qty').value = item.qty;
@@ -502,12 +485,24 @@
 
             document.getElementById('item-modal').classList.remove('hidden');
             document.getElementById('item-modal').classList.add('flex');
+            
+            document.getElementById('modal-save-btn').onclick = () => updateItem(id);
+        }
+
+        function getItemFormData() {
+            return {
+                category: document.getElementById('modal-category').value,
+                name: document.getElementById('modal-name').value.trim(),
+                qty: parseInt(document.getElementById('modal-qty').value) || 0,
+                unit: document.getElementById('modal-unit').value,
+                price: parseFloat(document.getElementById('modal-price').value) || null,
+                threshold: 5
+            };
         }
 
         async function saveNewItem() {
             if (!currentStore || !currentStore.id) {
                 alert("Session error. Please login again.");
-                console.error("currentStore is not set");
                 return;
             }
 
@@ -522,17 +517,39 @@
             saveBtn.innerText = "Saving...";
             saveBtn.disabled = true;
 
+            // Optimistic update
+            const tempItem = {
+                id: 'temp-' + Date.now(),
+                ...data,
+                storeId: currentStore.id
+            };
+            inventory.unshift(tempItem);
+            renderInventory();
+            updateStats();
+
             try {
-                await db.collection('inventory').add({
+                const docRef = await db.collection('inventory').add({
                     ...data,
                     storeId: currentStore.id,
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 });
+
+                // Replace temp with real
+                const realIndex = inventory.findIndex(i => i.id === tempItem.id);
+                if (realIndex !== -1) {
+                    inventory[realIndex] = { id: docRef.id, ...data };
+                }
+
                 hideModal();
-                await loadInventory();
+                renderInventory();
+                updateStats();
+
             } catch (error) {
                 console.error("Error saving item:", error);
-                alert("Failed to save item. Please check console for details.");
+                inventory = inventory.filter(i => i.id !== tempItem.id);
+                renderInventory();
+                updateStats();
+                alert("Failed to save item. Please try again.");
             } finally {
                 saveBtn.innerText = originalText;
                 saveBtn.disabled = false;
@@ -553,31 +570,51 @@
             }
         }
 
-        function getItemFormData() {
-            return {
-                category: document.getElementById('modal-category').value,
-                name: document.getElementById('modal-name').value.trim(),
-                qty: parseInt(document.getElementById('modal-qty').value) || 0,
-                unit: document.getElementById('modal-unit').value,
-                price: parseFloat(document.getElementById('modal-price').value) || null,
-                threshold: 5
-            };
-        }
-
         function hideModal() {
             document.getElementById('item-modal').classList.remove('flex');
             document.getElementById('item-modal').classList.add('hidden');
+            document.getElementById('modal-save-btn').onclick = saveNewItem;
         }
 
         function showProfile() {
             if (!currentStore) return;
-            alert(`Store: ${currentStore.storeName}\nArea: ${currentStore.area}\n\nM-Pin is set and saved securely.`);
+
+            const modalHTML = `
+                <div onclick="this.remove()" class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center">
+                    <div onclick="event.stopImmediatePropagation()" class="bg-white w-full max-w-sm mx-4 rounded-3xl p-6 text-zinc-900">
+                        <div class="text-center mb-6">
+                            <div class="font-semibold text-xl">${currentStore.storeName}</div>
+                            <div class="text-emerald-600">${currentStore.area}</div>
+                        </div>
+                        
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between py-2 border-b">
+                                <span class="text-zinc-500">M-Pin</span>
+                                <span class="font-mono">${currentStore.mpin}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 grid grid-cols-2 gap-3">
+                            <button onclick="logout(); this.closest('.fixed').remove()" 
+                                    class="py-3 rounded-2xl border border-zinc-200 text-red-600 font-medium">Logout</button>
+                            <button onclick="this.closest('.fixed').remove()" 
+                                    class="py-3 rounded-2xl bg-emerald-600 text-white font-medium">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
 
-        // Initialize
+        function logout() {
+            localStorage.removeItem('grabit_current_store');
+            window.location.reload();
+        }
+
+        // ==================== INIT ====================
         function initializeApp() {
-            // Check if already logged in
             const savedStore = localStorage.getItem('grabit_current_store');
+            
             if (savedStore) {
                 currentStore = JSON.parse(savedStore);
                 document.getElementById('auth-screen').classList.add('hidden');
