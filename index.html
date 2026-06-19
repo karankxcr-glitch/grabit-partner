@@ -57,18 +57,14 @@
                 <p class="text-zinc-500 text-sm mb-6">Set up your store</p>
                 
                 <div class="space-y-4">
-                    <!-- NEW: Owner Name -->
                     <div>
                         <label class="text-sm font-medium">Owner Name</label>
                         <input id="su-owner-name" type="text" placeholder="Rahul Sharma" class="w-full border rounded-2xl px-4 py-3 mt-1">
                     </div>
-
-                    <!-- NEW: Phone Number -->
                     <div>
                         <label class="text-sm font-medium">Phone Number</label>
                         <input id="su-phone" type="tel" placeholder="9876543210" class="w-full border rounded-2xl px-4 py-3 mt-1">
                     </div>
-
                     <div>
                         <label class="text-sm font-medium">Store Name</label>
                         <input id="su-name" type="text" value="Sharma Kirana Store" class="w-full border rounded-2xl px-4 py-3 mt-1">
@@ -116,7 +112,6 @@
         </div>
 
         <div class="max-w-5xl mx-auto px-4 pt-5">
-            <!-- Stats -->
             <div class="grid grid-cols-3 gap-3 mb-5">
                 <div class="bg-white border rounded-2xl p-4">
                     <div class="text-xs text-zinc-500">Total Items</div>
@@ -132,7 +127,6 @@
                 </div>
             </div>
 
-            <!-- Search -->
             <div class="relative mb-4">
                 <i class="fa-solid fa-search absolute left-4 top-3.5 text-zinc-400"></i>
                 <input id="search-input" type="text" placeholder="Search items..." oninput="renderInventory()"
@@ -149,7 +143,6 @@
             <div id="inventory-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
         </div>
 
-        <!-- FAB -->
         <button onclick="openAddModal()" class="fixed bottom-6 right-5 w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-xl">
             <i class="fa-solid fa-plus text-xl"></i>
         </button>
@@ -251,36 +244,20 @@
             const mpin = document.getElementById('su-mpin').value;
             const mpin2 = document.getElementById('su-mpin2').value;
 
-            if (!ownerName || !phone || !name || !area) {
-                return showToast("Please fill Owner Name, Phone, Store Name and Area", true);
-            }
-            if (mpin.length !== 6 || mpin !== mpin2) {
-                return showToast("M-Pin must be 6 digits and match", true);
-            }
+            if (!ownerName || !phone || !name || !area) return showToast("Please fill all fields", true);
+            if (mpin.length !== 6 || mpin !== mpin2) return showToast("M-Pin must be 6 digits and match", true);
 
             const btn = document.getElementById('signup-btn');
-            const original = btn.innerHTML;
             btn.innerHTML = `<span class="spinner"></span> Creating...`;
             btn.disabled = true;
 
             try {
                 const docRef = await db.collection('stores').add({
-                    ownerName: ownerName,
-                    phone: phone,
-                    storeName: name,
-                    area: area,
-                    mpin: mpin,
+                    ownerName, phone, storeName: name, area, mpin,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                currentStore = { 
-                    id: docRef.id, 
-                    ownerName, 
-                    phone, 
-                    storeName: name, 
-                    area, 
-                    mpin 
-                };
+                currentStore = { id: docRef.id, ownerName, phone, storeName: name, area, mpin };
                 localStorage.setItem('grabit_store', JSON.stringify(currentStore));
                 
                 document.getElementById('auth-screen').classList.add('hidden');
@@ -288,10 +265,9 @@
                 initMainApp();
                 showToast("Account created successfully!");
             } catch (err) {
-                console.error(err);
                 showToast("Failed to create account", true);
             } finally {
-                btn.innerHTML = original;
+                btn.innerHTML = `Create Account & Login`;
                 btn.disabled = false;
             }
         }
@@ -301,16 +277,13 @@
             if (mpin.length !== 6) return showToast("Enter 6-digit M-Pin", true);
 
             const btn = document.getElementById('login-btn');
-            const original = btn.innerHTML;
             btn.innerHTML = `<span class="spinner"></span> Logging in...`;
             btn.disabled = true;
 
             try {
                 const snap = await db.collection('stores').where('mpin', '==', mpin).limit(1).get();
-                if (snap.empty) {
-                    showToast("Invalid M-Pin", true);
-                    return;
-                }
+                if (snap.empty) return showToast("Invalid M-Pin", true);
+
                 const doc = snap.docs[0];
                 currentStore = { id: doc.id, ...doc.data() };
                 localStorage.setItem('grabit_store', JSON.stringify(currentStore));
@@ -319,18 +292,14 @@
                 document.getElementById('main-app').classList.remove('hidden');
                 initMainApp();
             } catch (err) {
-                console.error(err);
                 showToast("Login failed", true);
             } finally {
-                btn.innerHTML = original;
+                btn.innerHTML = `Login`;
                 btn.disabled = false;
             }
         }
 
         function initMainApp() {
-            // You can show owner name in header if you want
-            document.getElementById('hdr-store').innerText = currentStore.storeName;
-            document.getElementById('hdr-area').innerText = currentStore.area;
             loadInventory();
         }
 
@@ -342,17 +311,11 @@
 
                 inventory = [];
                 snap.forEach(doc => inventory.push({ id: doc.id, ...doc.data() }));
-
-                inventory.sort((a, b) => {
-                    const ta = a.lastUpdated?.toMillis?.() || 0;
-                    const tb = b.lastUpdated?.toMillis?.() || 0;
-                    return tb - ta;
-                });
+                inventory.sort((a, b) => (b.lastUpdated?.toMillis?.() || 0) - (a.lastUpdated?.toMillis?.() || 0));
 
                 renderInventory();
                 updateStats();
             } catch (err) {
-                console.error("loadInventory error:", err);
                 showToast("Failed to load inventory", true);
             }
         }
@@ -364,10 +327,7 @@
 
             let filtered = inventory;
             if (search) {
-                filtered = inventory.filter(i => 
-                    i.name.toLowerCase().includes(search) || 
-                    i.category.toLowerCase().includes(search)
-                );
+                filtered = inventory.filter(i => i.name.toLowerCase().includes(search) || i.category.toLowerCase().includes(search));
             }
 
             if (filtered.length === 0) {
@@ -406,14 +366,12 @@
 
         function updateStats() {
             document.getElementById('stat-total').innerText = inventory.length;
-            const low = inventory.filter(i => i.qty <= (i.threshold || 5)).length;
-            document.getElementById('stat-low').innerText = low;
+            document.getElementById('stat-low').innerText = inventory.filter(i => i.qty <= (i.threshold || 5)).length;
         }
 
         async function adjustQuantity(id, delta) {
             const item = inventory.find(i => i.id === id);
             if (!item) return;
-
             item.qty = Math.max(0, item.qty + delta);
             renderInventory();
 
@@ -422,11 +380,10 @@
                     qty: item.qty,
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 });
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) {}
         }
 
+        // ==================== STABLE MODAL FUNCTIONS ====================
         function openAddModal() {
             editingId = null;
             document.getElementById('modal-title').innerText = 'Add New Item';
@@ -500,13 +457,13 @@
                 closeModal();
                 await loadInventory();
             } catch (err) {
-                console.error(err);
                 showToast("Failed to save item", true);
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
             }
         }
+        // ==================== END STABLE MODAL ====================
 
         function showProfile() {
             const html = `
@@ -515,7 +472,6 @@
                         <div class="text-center mb-6">
                             <div class="font-semibold text-xl">${currentStore.storeName}</div>
                             <div class="text-emerald-600">${currentStore.area}</div>
-                            <div class="text-sm text-zinc-500 mt-1">${currentStore.ownerName || ''} • ${currentStore.phone || ''}</div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <button onclick="logout(); this.closest('.fixed').remove()" class="py-3 rounded-2xl border border-red-200 text-red-600 font-medium">Logout</button>
@@ -548,19 +504,3 @@
 </html>
 ``` 
 
-**✅ Updated Partner App Created**
-
-**File:** `Grabit-Partner-With-OwnerDetails.html`
-
-### Changes Made (Minimal as requested):
-
-Added two new fields during **Signup**:
-
-- **Owner Name**
-- **Phone Number**
-
-These are now saved in Firestore along with other store details.
-
-Everything else remains exactly the same and working as before.
-
-Upload this new file to Vercel and test the signup flow. Let me know if you want any small adjustments!
