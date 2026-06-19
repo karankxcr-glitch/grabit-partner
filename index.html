@@ -224,7 +224,7 @@
 
     <script>
         // Firebase Config - REPLACE WITH YOURS
-        const firebaseConfig = {
+       const firebaseConfig = {
             apiKey: "YOUR_API_KEY_HERE",
             authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
             projectId: "YOUR_PROJECT_ID",
@@ -475,7 +475,7 @@
         function showAddModal() {
             document.getElementById('modal-title').innerText = 'Add New Item';
             document.getElementById('modal-save-btn').innerText = 'Add Item';
-            document.getElementById('modal-save-btn').onclick = saveNewItem;
+            document.getElementById('modal-save-btn').onclick = () => saveNewItem();
             
             // Clear fields
             document.getElementById('modal-name').value = '';
@@ -505,11 +505,22 @@
         }
 
         async function saveNewItem() {
+            if (!currentStore || !currentStore.id) {
+                alert("Session error. Please login again.");
+                console.error("currentStore is not set");
+                return;
+            }
+
             const data = getItemFormData();
             if (!data.name) {
                 alert("Item name is required");
                 return;
             }
+
+            const saveBtn = document.getElementById('modal-save-btn');
+            const originalText = saveBtn.innerText;
+            saveBtn.innerText = "Saving...";
+            saveBtn.disabled = true;
 
             try {
                 await db.collection('inventory').add({
@@ -520,7 +531,11 @@
                 hideModal();
                 await loadInventory();
             } catch (error) {
-                alert("Failed to save item");
+                console.error("Error saving item:", error);
+                alert("Failed to save item. Please check console for details.");
+            } finally {
+                saveBtn.innerText = originalText;
+                saveBtn.disabled = false;
             }
         }
 
