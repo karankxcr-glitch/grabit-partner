@@ -330,9 +330,13 @@ function setBtnLoading(btnId, labelId, loading, defaultLabel) {
 }
 
 // ─────────────────────────────────────────────
-// AUTH — CREATE ACCOUNT (no photo)
+// AUTH — CREATE ACCOUNT
 // ─────────────────────────────────────────────
-async function createAccount() {
+let isCreating = false;
+
+function createAccount() {
+    if (isCreating) return;
+
     const name  = document.getElementById('su-name').value.trim();
     const area  = document.getElementById('su-area').value.trim();
     const mpin  = document.getElementById('su-mpin').value;
@@ -343,37 +347,64 @@ async function createAccount() {
     if (!/^\d{6}$/.test(mpin)) return toast('M-Pin must be numeric', 'error');
     if (mpin !== mpin2)         return toast("M-Pins don't match", 'error');
 
+    isCreating = true;
     setBtnLoading('signup-btn', 'signup-btn-label', true);
-    try {
-        const docRef = await db.collection('stores').add({
-            storeName: name,
-            area:      area,
-            mpin:      mpin,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+
+    const safetyTimer = setTimeout(() => {
+        isCreating = false;
+        setBtnLoading('signup-btn', 'signup-btn-label', false, 'Create Account &amp; Login');
+        toast('Timed out — check your connection', 'error');
+    }, 10000);
+
+    db.collection('stores').add({
+        storeName: name,
+        area:      area,
+        mpin:      mpin,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    })
+    .then(docRef => {
+        clearTimeout(safetyTimer);
+        isCreating = false;
+        setBtnLoading('signup-btn', 'signup-btn-label', false, 'Create Account &amp; Login');
         store = { id: docRef.id, storeName: name, area, mpin };
         persistStore();
         bootApp();
         toast('Account created! Welcome 🎉');
-    } catch (err) {
-        console.error('createAccount error:', err);
-        toast('Failed to create account — check your connection', 'error');
-    } finally {
+    })
+    .catch(err => {
+        clearTimeout(safetyTimer);
+        isCreating = false;
         setBtnLoading('signup-btn', 'signup-btn-label', false, 'Create Account &amp; Login');
-    }
+        console.error('createAccount error:', err);
+        toast('Failed to create account — check Firestore rules', 'error');
+    });
 }
 
 // ─────────────────────────────────────────────
 // AUTH — LOGIN
 // ─────────────────────────────────────────────
-async function loginWithMPin() {
-    const mpin = document.getElementById('login-mpin').value.trim();
-    if (mpin.length !== 6) return toast('Enter your 6-digit M-Pin', 'error');
+let isLoggingIn = false;
 
+function loginWithMPin() {
+    if (isLoggingIn) return;
+
+    const mpin = document.getElementById('login-mpin').value.trim();
+    if (mpin.length !== 6) { toast('Enter your 6-digit M-Pin', 'error'); return; }
+
+    isLoggingIn = true;
     setBtnLoading('login-btn', 'login-btn-label', true);
-    try {
-        // FIX: removed orderBy to avoid composite index requirement
-        const snap = await db.collection('stores').where('mpin', '==', mpin).limit(1).get();
+
+    const safetyTimer = setTimeout(() => {
+        isLoggingIn = false;
+        setBtnLoading('login-btn', 'login-btn-label', false, 'Login');
+        toast('Timed out — check your connection', 'error');
+    }, 10000);
+
+    db.collection('stores').where('mpin', '==', mpin).limit(1).get()
+    .then(snap => {
+        clearTimeout(safetyTimer);
+        isLoggingIn = false;
+        setBtnLoading('login-btn', 'login-btn-label', false, 'Login');
         if (snap.empty) {
             toast('Invalid M-Pin. Try again.', 'error');
             document.getElementById('login-mpin').value = '';
@@ -385,12 +416,14 @@ async function loginWithMPin() {
         persistStore();
         bootApp();
         toast('Logged in!');
-    } catch (err) {
-        console.error(err);
-        toast('Login failed. Check connection.', 'error');
-    } finally {
+    })
+    .catch(err => {
+        clearTimeout(safetyTimer);
+        isLoggingIn = false;
         setBtnLoading('login-btn', 'login-btn-label', false, 'Login');
-    }
+        console.error('login error:', err);
+        toast('Login failed — check Firestore rules & connection', 'error');
+    });
 }
 
 // ─────────────────────────────────────────────
@@ -524,7 +557,7 @@ function updateStats() {
 }
 
 // ─────────────────────────────────────────────
-// ADJUST QTY — debounced to prevent race conditions
+// ADJUST QTY — debounced, no async/await
 // ─────────────────────────────────────────────
 function adjustQty(id, delta) {
     const idx = inventory.findIndex(i => i.id === id);
@@ -533,18 +566,16 @@ function adjustQty(id, delta) {
     inventory[idx].qty = Math.max(0, (inventory[idx].qty || 0) + delta);
     renderInventory(); // instant UI update
 
-    // Debounce the Firestore write — wait 600ms after last click
     clearTimeout(qtyDebounceTimers[id]);
-    qtyDebounceTimers[id] = setTimeout(async () => {
-        try {
-            await db.collection('inventory').doc(id).update({
-                qty:         inventory[idx].qty,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        } catch(err) {
-            console.error(err);
-            toast('Sync error — changes may not save', 'error');
-        }
+    qtyDebounceTimers[id] = setTimeout(() => {
+        db.collection('inventory').doc(id).update({
+            qty:         inventory[idx].qty,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .catch(err => {
+            console.error('qty sync error:', err);
+            toast('Qty sync failed', 'error');
+        });
     }, 600);
 }
 
@@ -592,48 +623,63 @@ function closeModal() {
 }
 
 // ─────────────────────────────────────────────
-// SAVE ITEM (add or edit) — no photo upload
+// SAVE ITEM — bulletproof version
 // ─────────────────────────────────────────────
-async function saveItem() {
-    const name = document.getElementById('m-name').value.trim();
-    if (!name) return toast('Item name is required', 'error');
+let isSaving = false; // guard against double-clicks
 
-    // Capture editingId NOW before any async gaps can clear it
-    const isEditing = editingId;
+function saveItem() {
+    if (isSaving) return; // already in flight
+
+    const name = document.getElementById('m-name').value.trim();
+    if (!name) { toast('Item name is required', 'error'); return; }
+
+    const isEditing = editingId; // capture before any async
 
     const data = {
         category:    document.getElementById('m-cat').value,
         name:        name,
-        qty:         parseInt(document.getElementById('m-qty').value)   || 0,
+        qty:         parseInt(document.getElementById('m-qty').value)     || 0,
         unit:        document.getElementById('m-unit').value,
         price:       parseFloat(document.getElementById('m-price').value) || null,
-        threshold:   parseInt(document.getElementById('m-thresh').value) || 5,
+        threshold:   parseInt(document.getElementById('m-thresh').value)  || 5,
         storeId:     store.id,
         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
     };
 
+    // Lock UI
+    isSaving = true;
     const saveBtn = document.getElementById('modal-save-btn');
     const lblEl   = document.getElementById('modal-save-label');
     saveBtn.disabled = true;
     lblEl.innerHTML  = '<span class="spinner"></span>';
 
-    try {
-        if (isEditing) {
-            await db.collection('inventory').doc(isEditing).update(data);
-            toast('Item updated ✓');
-        } else {
-            await db.collection('inventory').add(data);
-            toast('Item added ✓');
-        }
-        closeModal();
-        // onSnapshot listener auto-refreshes the list
-    } catch (err) {
-        console.error('saveItem error:', err);
-        toast('Save failed — check your connection', 'error');
-    } finally {
-        saveBtn.disabled  = false;
-        lblEl.textContent = isEditing ? 'Save Changes' : 'Add Item';
+    // Safety timeout — always unlock after 8s no matter what
+    const safetyTimer = setTimeout(() => resetSaveBtn(isEditing), 8000);
+
+    function resetSaveBtn(wasEditing) {
+        isSaving = false;
+        clearTimeout(safetyTimer);
+        const btn = document.getElementById('modal-save-btn');
+        const lbl = document.getElementById('modal-save-label');
+        if (btn) btn.disabled = false;
+        if (lbl) lbl.textContent = wasEditing ? 'Save Changes' : 'Add Item';
     }
+
+    const operation = isEditing
+        ? db.collection('inventory').doc(isEditing).update(data)
+        : db.collection('inventory').add(data);
+
+    operation
+        .then(() => {
+            resetSaveBtn(isEditing);
+            closeModal();
+            toast(isEditing ? 'Item updated ✓' : 'Item added ✓');
+        })
+        .catch(err => {
+            console.error('saveItem error:', err);
+            resetSaveBtn(isEditing);
+            toast('Save failed — check Firestore rules & connection', 'error');
+        });
 }
 
 // ─────────────────────────────────────────────
