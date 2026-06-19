@@ -3,54 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#10b981">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Grabit Partner">
-    <title>Grabit Partner • Real App</title>
-    
+    <title>Grabit Partner</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Poppins:wght@500;600&amp;display=swap');
-        
         body { font-family: 'Inter', system_ui, sans-serif; }
         .logo-font { font-family: 'Poppins', system_ui, sans-serif; font-weight: 600; letter-spacing: -0.025em; }
-        
-        .inventory-card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
-        .inventory-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
-        
-        .qty-badge { font-weight: 700; font-size: 1.1rem; line-height: 1; }
-        .modal { animation: modalPop 0.2s ease-out forwards; }
-        @keyframes modalPop { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        
-        .category-chip { transition: all 0.15s ease; }
-        .category-chip.active { background-color: #10b981; color: white; border-color: #10b981; }
-        
-        .stock-low { border-left: 4px solid #ef4444; }
-        .stock-ok { border-left: 4px solid #10b981; }
-        
-        .grabit-header { background: linear-gradient(to right, #10b981, #059669); }
-        
-        .item-icon { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; border-radius: 10px; }
-        
-        .otp-input { width: 48px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; border: 2px solid #d1d5db; border-radius: 12px; outline: none; }
-        .otp-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+        .pin-input { width: 48px; height: 56px; text-align: center; font-size: 1.6rem; font-weight: 700; border: 2px solid #3f3f46; border-radius: 12px; background: white; }
+        .pin-input:focus { border-color: #10b981; outline: none; }
+        .inventory-card { transition: all 0.2s ease; }
     </style>
 </head>
-<body class="bg-zinc-50 text-zinc-900">
-    <!-- Login Screen -->
-    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-zinc-50 px-4">
+<body class="bg-zinc-50">
+    <!-- Login / Signup Screen -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center px-4">
         <div class="w-full max-w-md">
+            <!-- Logo -->
             <div class="flex justify-center mb-8">
                 <div class="flex items-center gap-x-3">
-                    <div class="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <div class="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center">
                         <i class="fa-solid fa-bolt text-white text-4xl"></i>
                     </div>
                     <div>
@@ -60,74 +34,71 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-3xl shadow-xl p-8 border border-zinc-100">
+            <!-- Login Card -->
+            <div id="login-card" class="bg-white rounded-3xl shadow-xl p-8 border border-zinc-100">
                 <div class="text-center mb-8">
-                    <h2 class="text-2xl font-semibold tracking-tight">Welcome, Partner!</h2>
-                    <p class="text-zinc-500 mt-1.5 text-sm">Real OTP • Real Cloud Storage</p>
+                    <h2 class="text-2xl font-semibold">Welcome Back</h2>
+                    <p class="text-zinc-500 mt-1">Login with your 6-digit M-Pin</p>
                 </div>
 
-                <!-- Phone Step -->
-                <div id="phone-step">
-                    <div class="space-y-5">
-                        <div>
-                            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Store Name</label>
-                            <input id="store-name-input" type="text" value="Sharma Kirana Store"
-                                   class="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 focus:border-emerald-500 rounded-2xl text-base outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Area / Locality</label>
-                            <input id="area-input" type="text" value="Indirapuram, Ghaziabad"
-                                   class="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 focus:border-emerald-500 rounded-2xl text-base outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Mobile Number</label>
-                            <div class="flex">
-                                <div class="px-4 py-3.5 bg-zinc-100 border border-zinc-200 rounded-l-2xl text-zinc-500 font-medium">+91</div>
-                                <input id="phone-input" type="tel" value="9876543210" maxlength="10"
-                                       class="flex-1 px-4 py-3.5 bg-zinc-50 border border-zinc-200 focus:border-emerald-500 rounded-r-2xl text-base outline-none">
-                            </div>
-                            <p class="text-xs text-emerald-600 mt-1">You will receive a real SMS OTP</p>
-                        </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-zinc-700 mb-2">Enter your 6-digit M-Pin</label>
+                    <div class="flex justify-center gap-2" id="login-pin-inputs">
+                        <!-- 6 inputs created by JS -->
                     </div>
+                </div>
 
-                    <button onclick="sendRealOTP()" 
-                            class="mt-8 w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 transition-all text-white font-semibold py-4 rounded-2xl text-base shadow-lg flex items-center justify-center gap-x-2">
-                        <span>Send Real OTP via SMS</span>
-                        <i class="fa-solid fa-paper-plane"></i>
+                <button onclick="loginWithMPin()" 
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-4 rounded-2xl">
+                    Login
+                </button>
+
+                <div class="text-center mt-6">
+                    <button onclick="showSignupScreen()" class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">
+                        New store? Create Account →
                     </button>
                 </div>
+            </div>
 
-                <!-- OTP Step -->
-                <div id="otp-step" class="hidden">
-                    <div class="text-center mb-6">
-                        <div class="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-                            <i class="fa-solid fa-sms text-emerald-600 text-3xl"></i>
-                        </div>
-                        <h3 class="font-semibold text-lg">Enter the OTP sent to your phone</h3>
-                        <p class="text-sm text-zinc-500 mt-1">+91 <span id="otp-phone-display"></span></p>
-                    </div>
-
-                    <div class="flex justify-center gap-2 mb-6" id="otp-inputs">
-                        <!-- Dynamic OTP inputs -->
-                    </div>
-
-                    <div class="flex justify-between items-center mb-6 text-sm">
-                        <button onclick="resendRealOTP()" id="resend-btn"
-                                class="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-x-1">
-                            <i class="fa-solid fa-redo"></i> <span>Resend OTP</span>
-                        </button>
-                        <span id="otp-timer" class="font-mono text-zinc-500">02:00</span>
-                    </div>
-
-                    <button onclick="verifyRealOTP()" 
-                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-4 rounded-2xl">
-                        Verify OTP &amp; Login
-                    </button>
-
-                    <button onclick="goBackToPhoneStep()" class="mt-3 w-full text-sm text-zinc-500">Change number</button>
+            <!-- Signup Card -->
+            <div id="signup-card" class="hidden bg-white rounded-3xl shadow-xl p-8 border border-zinc-100">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-semibold">Create Account</h2>
+                    <p class="text-zinc-500 mt-1">First time? Set up your store</p>
                 </div>
 
-                <p class="text-center text-xs text-zinc-400 mt-6">Grabit uses real SMS authentication</p>
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 mb-1.5">Store Name</label>
+                        <input id="signup-store-name" type="text" value="Sharma Kirana Store"
+                               class="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 mb-1.5">Area / Locality</label>
+                        <input id="signup-area" type="text" value="Indirapuram, Ghaziabad"
+                               class="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 mb-2">Create 6-digit M-Pin</label>
+                        <div class="flex justify-center gap-2 mb-2" id="signup-pin-inputs"></div>
+                        <p class="text-xs text-zinc-400 text-center">Enter a 6-digit number you will remember</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 mb-2">Confirm M-Pin</label>
+                        <div class="flex justify-center gap-2" id="confirm-pin-inputs"></div>
+                    </div>
+                </div>
+
+                <button onclick="createAccountWithMPin()" 
+                        class="mt-8 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-4 rounded-2xl">
+                    Create Account &amp; Login
+                </button>
+
+                <div class="text-center mt-4">
+                    <button onclick="showLoginScreen()" class="text-sm text-zinc-500">Already have an account? Login</button>
+                </div>
             </div>
         </div>
     </div>
@@ -135,190 +106,101 @@
     <!-- Main App -->
     <div id="main-app" class="hidden min-h-screen bg-zinc-50 pb-20">
         <!-- Header -->
-        <div class="grabit-header sticky top-0 z-50 text-white shadow-lg">
+        <div class="bg-white border-b sticky top-0 z-50">
             <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-x-3">
                     <div class="flex items-center gap-x-2.5">
-                        <div class="w-9 h-9 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                        <div class="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center">
                             <i class="fa-solid fa-bolt text-white text-2xl"></i>
                         </div>
-                        <div>
-                            <span class="logo-font text-3xl font-bold tracking-tighter">Grabit</span>
-                            <span class="text-emerald-200 text-xs font-medium tracking-[2px] ml-0.5">PARTNER</span>
-                        </div>
+                        <span class="logo-font text-3xl font-bold text-emerald-700">Grabit</span>
                     </div>
                 </div>
-
                 <div class="flex items-center gap-x-3">
-                    <div class="text-right hidden sm:block">
+                    <div class="text-right">
                         <div id="header-store-name" class="font-semibold text-sm"></div>
-                        <div id="header-area" class="text-emerald-200 text-xs"></div>
+                        <div id="header-area" class="text-xs text-zinc-500"></div>
                     </div>
-                    <div onclick="showProfile()" class="w-9 h-9 bg-white/20 backdrop-blur rounded-full flex items-center justify-center cursor-pointer ring-2 ring-white/30">
-                        <i class="fa-solid fa-store text-white text-lg"></i>
+                    <div onclick="showProfile()" class="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center cursor-pointer">
+                        <i class="fa-solid fa-store text-emerald-600"></i>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="max-w-5xl mx-auto px-4 pt-6">
-            <!-- Welcome + Metrics -->
-            <div class="mb-6">
-                <div class="flex items-end justify-between mb-4">
-                    <div>
-                        <h1 class="text-3xl font-semibold tracking-tighter">Good morning!</h1>
-                        <p class="text-zinc-500">Your inventory is synced to the cloud in real-time</p>
-                    </div>
-                    <button onclick="syncToCloud()" 
-                            class="hidden sm:flex items-center gap-x-2 bg-white border border-emerald-200 hover:border-emerald-300 px-5 py-2.5 rounded-2xl text-sm font-medium text-emerald-700">
-                        <i class="fa-solid fa-sync-alt"></i>
-                        <span>Sync to Cloud</span>
-                    </button>
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <div class="bg-white border rounded-3xl p-4">
+                    <div class="text-xs text-zinc-500">Total Items</div>
+                    <div id="stat-total" class="text-3xl font-bold text-emerald-700 mt-1">0</div>
                 </div>
-
-                <!-- Metrics -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div class="bg-white border border-zinc-100 rounded-3xl p-4">
-                        <div class="flex justify-between">
-                            <div>
-                                <p class="text-xs text-zinc-500">Total SKUs</p>
-                                <p id="metric-total" class="text-3xl font-bold text-emerald-700 mt-0.5">0</p>
-                            </div>
-                            <div class="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                                <i class="fa-solid fa-boxes text-emerald-600 text-xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white border border-zinc-100 rounded-3xl p-4">
-                        <div class="flex justify-between">
-                            <div>
-                                <p class="text-xs text-zinc-500">Low Stock</p>
-                                <p id="metric-low" class="text-3xl font-bold text-red-500 mt-0.5">0</p>
-                            </div>
-                            <div class="w-10 h-10 bg-red-100 rounded-2xl flex items-center justify-center">
-                                <i class="fa-solid fa-exclamation-triangle text-red-500 text-xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white border border-zinc-100 rounded-3xl p-4">
-                        <div class="flex justify-between">
-                            <div>
-                                <p class="text-xs text-zinc-500">Last Synced</p>
-                                <p id="metric-last-sync" class="text-base font-semibold text-emerald-700 mt-0.5">Just now</p>
-                            </div>
-                            <div class="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                                <i class="fa-solid fa-cloud text-emerald-600 text-xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div onclick="showMockOrders()" class="bg-white border border-zinc-100 rounded-3xl p-4 cursor-pointer">
-                        <div class="flex justify-between">
-                            <div>
-                                <p class="text-xs text-zinc-500">Today's Pickups</p>
-                                <p class="text-3xl font-bold text-emerald-700 mt-0.5">0</p>
-                            </div>
-                            <div class="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                                <i class="fa-solid fa-motorcycle text-emerald-600 text-xl"></i>
-                            </div>
-                        </div>
-                    </div>
+                <div class="bg-white border rounded-3xl p-4">
+                    <div class="text-xs text-zinc-500">Low Stock</div>
+                    <div id="stat-low" class="text-3xl font-bold text-red-500 mt-1">0</div>
+                </div>
+                <div class="bg-white border rounded-3xl p-4">
+                    <div class="text-xs text-zinc-500">Last Updated</div>
+                    <div id="stat-updated" class="text-sm font-semibold text-emerald-700 mt-1">Just now</div>
                 </div>
             </div>
 
             <!-- Search -->
-            <div class="flex gap-3 mb-5">
-                <div class="flex-1 relative">
-                    <div class="absolute left-5 top-1/2 -mt-2 text-zinc-400"><i class="fa-solid fa-search"></i></div>
-                    <input id="search-input" type="text" placeholder="Search items..." onkeyup="filterInventory()"
-                           class="w-full bg-white border border-zinc-200 focus:border-emerald-400 pl-12 pr-5 py-3.5 rounded-3xl text-base outline-none">
-                </div>
-                <button onclick="syncToCloud()" class="sm:hidden bg-emerald-600 text-white px-5 rounded-3xl text-sm font-medium">Sync</button>
-            </div>
-
-            <!-- Category Filters -->
-            <div class="mb-4 overflow-x-auto pb-2">
-                <div class="flex gap-2">
-                    <div onclick="filterByCategory('all')" id="cat-all" class="category-chip active cursor-pointer px-5 py-2 text-sm font-medium bg-emerald-600 text-white rounded-2xl">All</div>
-                    <div onclick="filterByCategory('Staples')" id="cat-Staples" class="category-chip cursor-pointer px-4 py-2 text-sm font-medium bg-white border border-zinc-200 rounded-2xl flex items-center gap-x-1.5"><i class="fa-solid fa-wheat-awn text-amber-600"></i> Staples</div>
-                    <div onclick="filterByCategory('Dairy')" id="cat-Dairy" class="category-chip cursor-pointer px-4 py-2 text-sm font-medium bg-white border border-zinc-200 rounded-2xl flex items-center gap-x-1.5"><i class="fa-solid fa-cheese text-blue-500"></i> Dairy</div>
-                    <div onclick="filterByCategory('Snacks')" id="cat-Snacks" class="category-chip cursor-pointer px-4 py-2 text-sm font-medium bg-white border border-zinc-200 rounded-2xl flex items-center gap-x-1.5"><i class="fa-solid fa-cookie-bite text-orange-500"></i> Snacks</div>
-                    <div onclick="filterByCategory('Beverages')" id="cat-Beverages" class="category-chip cursor-pointer px-4 py-2 text-sm font-medium bg-white border border-zinc-200 rounded-2xl flex items-center gap-x-1.5"><i class="fa-solid fa-wine-bottle text-purple-500"></i> Beverages</div>
-                </div>
+            <div class="relative mb-5">
+                <i class="fa-solid fa-search absolute left-5 top-4 text-zinc-400"></i>
+                <input id="search-input" type="text" placeholder="Search items..." onkeyup="filterInventory()"
+                       class="w-full bg-white border pl-12 py-3.5 rounded-3xl">
             </div>
 
             <!-- Inventory Header -->
-            <div class="flex items-center justify-between mb-3 px-1">
-                <div>
-                    <span class="font-semibold text-lg">Your Inventory</span>
-                    <span id="inventory-count" class="ml-2 text-sm bg-emerald-100 text-emerald-700 px-3 py-0.5 rounded-full font-medium">0 items</span>
-                </div>
-                <div class="hidden sm:flex gap-3">
-                    <button onclick="exportToCSV()" class="flex items-center gap-x-2 px-4 py-2 text-emerald-600 border border-emerald-200 rounded-2xl text-sm font-medium hover:bg-emerald-50">
-                        <i class="fa-solid fa-download"></i> <span>Export CSV</span>
-                    </button>
-                    <button onclick="showAddModal()" class="flex items-center gap-x-2 text-emerald-600 font-medium text-sm">
-                        <i class="fa-solid fa-plus"></i> <span>Add Item</span>
-                    </button>
-                </div>
+            <div class="flex justify-between items-center mb-3 px-1">
+                <div class="font-semibold text-lg">Your Inventory</div>
+                <button onclick="showAddModal()" class="flex items-center gap-x-2 text-emerald-600 text-sm font-medium">
+                    <i class="fa-solid fa-plus"></i> <span>Add Item</span>
+                </button>
             </div>
 
             <!-- Inventory Grid -->
-            <div id="inventory-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 pb-8"></div>
-            
-            <div id="empty-state" class="hidden text-center py-12">
-                <i class="fa-solid fa-box-open text-5xl text-zinc-300 mb-4"></i>
-                <p class="text-zinc-400">No items found</p>
-            </div>
+            <div id="inventory-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-8"></div>
         </div>
 
         <!-- FAB -->
-        <button onclick="showAddModal()" class="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-3xl shadow-xl z-40">
+        <button onclick="showAddModal()" class="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-3xl shadow-xl">
             <i class="fa-solid fa-plus"></i>
         </button>
-
-        <!-- Bottom Nav -->
-        <div class="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
-            <div class="max-w-5xl mx-auto grid grid-cols-4 text-center text-xs">
-                <div onclick="switchTab('home')" class="py-3 text-emerald-600 font-medium flex flex-col items-center"><i class="fa-solid fa-home text-xl mb-0.5"></i> Home</div>
-                <div onclick="switchTab('inventory')" class="py-3 text-zinc-500 flex flex-col items-center"><i class="fa-solid fa-boxes text-xl mb-0.5"></i> Inventory</div>
-                <div onclick="syncToCloud()" class="py-3 text-zinc-500 flex flex-col items-center"><i class="fa-solid fa-sync text-xl mb-0.5"></i> Sync</div>
-                <div onclick="showProfile()" class="py-3 text-zinc-500 flex flex-col items-center"><i class="fa-solid fa-user text-xl mb-0.5"></i> Profile</div>
-            </div>
-        </div>
     </div>
 
     <!-- Add/Edit Modal -->
     <div id="item-modal" onclick="if (event.target.id === 'item-modal') hideModal()" class="hidden fixed inset-0 bg-black/60 z-[60] flex items-end md:items-center justify-center">
-        <div onclick="event.stopImmediatePropagation()" class="bg-white w-full md:w-[440px] md:rounded-3xl rounded-t-3xl p-6 modal">
+        <div onclick="event.stopImmediatePropagation()" class="bg-white w-full md:w-[420px] md:rounded-3xl rounded-t-3xl p-6">
             <div class="flex justify-between mb-5">
-                <h3 id="modal-title" class="text-2xl font-semibold">Add New Item</h3>
-                <button onclick="hideModal()" class="text-3xl text-zinc-400">×</button>
+                <h3 id="modal-title" class="text-xl font-semibold">Add New Item</h3>
+                <button onclick="hideModal()" class="text-3xl">×</button>
             </div>
 
             <div class="space-y-4">
                 <div>
-                    <label class="text-sm font-medium mb-1.5 block">Category</label>
-                    <select id="modal-category" class="w-full border border-zinc-200 rounded-2xl px-4 py-3">
+                    <label class="text-sm font-medium mb-1 block">Category</label>
+                    <select id="modal-category" class="w-full border rounded-2xl px-4 py-3">
                         <option value="Staples">Staples</option>
-                        <option value="Dairy">Dairy &amp; Eggs</option>
-                        <option value="Snacks">Snacks &amp; Namkeen</option>
+                        <option value="Dairy">Dairy & Eggs</option>
+                        <option value="Snacks">Snacks</option>
                         <option value="Beverages">Beverages</option>
                         <option value="Personal Care">Personal Care</option>
                         <option value="Household">Household</option>
-                        <option value="Spices">Spices</option>
                         <option value="Other">Other</option>
                     </select>
                 </div>
                 <div>
-                    <label class="text-sm font-medium mb-1.5 block">Item Name</label>
-                    <input id="modal-name" type="text" placeholder="e.g. Atta 5kg" class="w-full border border-zinc-200 rounded-2xl px-4 py-3">
+                    <label class="text-sm font-medium mb-1 block">Item Name</label>
+                    <input id="modal-name" type="text" class="w-full border rounded-2xl px-4 py-3">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="text-sm font-medium mb-1.5 block">Quantity</label>
+                        <label class="text-sm font-medium mb-1 block">Quantity</label>
                         <div class="flex">
-                            <input id="modal-qty" type="number" value="10" class="flex-1 border border-zinc-200 rounded-l-2xl px-4 py-3">
-                            <select id="modal-unit" class="border border-l-0 border-zinc-200 rounded-r-2xl px-3">
+                            <input id="modal-qty" type="number" value="10" class="flex-1 border rounded-l-2xl px-4 py-3">
+                            <select id="modal-unit" class="border rounded-r-2xl px-3">
                                 <option value="pcs">pcs</option>
                                 <option value="kg">kg</option>
                                 <option value="L">L</option>
@@ -327,31 +209,21 @@
                         </div>
                     </div>
                     <div>
-                        <label class="text-sm font-medium mb-1.5 block">Price (₹)</label>
-                        <input id="modal-price" type="number" value="45" class="w-full border border-zinc-200 rounded-2xl px-4 py-3">
+                        <label class="text-sm font-medium mb-1 block">Price (₹)</label>
+                        <input id="modal-price" type="number" value="45" class="w-full border rounded-2xl px-4 py-3">
                     </div>
-                </div>
-                <div>
-                    <label class="text-sm font-medium mb-1.5 block">Low Stock Threshold</label>
-                    <input id="modal-threshold" type="number" value="5" class="w-full border border-zinc-200 rounded-2xl px-4 py-3">
-                </div>
-                <div>
-                    <label class="text-sm font-medium mb-1.5 block">Notes (optional)</label>
-                    <textarea id="modal-notes" rows="2" class="w-full border border-zinc-200 rounded-2xl px-4 py-3"></textarea>
                 </div>
             </div>
 
             <div class="flex gap-3 mt-7">
-                <button onclick="hideModal()" class="flex-1 py-3.5 rounded-2xl border text-zinc-600">Cancel</button>
-                <button id="modal-save-btn" onclick="saveItemToCloud()" class="flex-1 py-3.5 rounded-2xl bg-emerald-600 text-white font-semibold">Save</button>
+                <button onclick="hideModal()" class="flex-1 py-3 rounded-2xl border">Cancel</button>
+                <button onclick="saveItem()" id="modal-save-btn" class="flex-1 py-3 rounded-2xl bg-emerald-600 text-white font-semibold">Save</button>
             </div>
         </div>
     </div>
 
-    <div id="toast-container" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-[70]"></div>
-
     <script>
-        // ========== FIREBASE CONFIG - REPLACE WITH YOURS ==========
+        // Firebase Config - REPLACE WITH YOURS
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY_HERE",
             authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -361,180 +233,153 @@
             appId: "YOUR_APP_ID"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // Global state
-        let currentUser = null;
+        let currentStore = null;
         let inventory = [];
-        let currentFilter = 'all';
-        let editingItemId = null;
-        let confirmationResult = null; // For Firebase phone auth
 
-        // Sample data (used only if no data in cloud)
-        const sampleInventory = [ /* same as before, shortened for brevity */ 
-            { category: "Staples", name: "Atta (Wheat Flour) 5kg", qty: 18, unit: "bags", price: 185, threshold: 5, notes: "" },
-            { category: "Dairy", name: "Amul Gold Milk 1L", qty: 42, unit: "pcs", price: 68, threshold: 10, notes: "" },
-            { category: "Snacks", name: "Parle-G Biscuits 200g", qty: 55, unit: "pcs", price: 22, threshold: 15, notes: "" }
-        ];
-
-        function initTailwind() {
-            // Already handled by CDN
-        }
-
-        // ========== REAL OTP FUNCTIONS ==========
-        function sendRealOTP() {
-            const phone = "+91" + document.getElementById('phone-input').value.trim();
-            const storeName = document.getElementById('store-name-input').value.trim() || "My Kirana Store";
-            const area = document.getElementById('area-input').value.trim() || "Ghaziabad";
-
-            if (!/^\+91\d{10}$/.test(phone)) {
-                showToast("Please enter a valid 10-digit Indian mobile number", "error");
-                return;
-            }
-
-            const appVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
-            
-            auth.signInWithPhoneNumber(phone, appVerifier)
-                .then((result) => {
-                    confirmationResult = result;
-                    window.tempLoginData = { storeName, area, phone };
-                    
-                    document.getElementById('phone-step').classList.add('hidden');
-                    document.getElementById('otp-step').classList.remove('hidden');
-                    document.getElementById('otp-phone-display').innerText = phone.replace('+91', '');
-                    
-                    createOTPInputs();
-                    startOTPTimer();
-                    showToast("Real OTP sent via SMS! Check your phone.", "success");
-                })
-                .catch((error) => {
-                    console.error(error);
-                    showToast("Failed to send OTP. Please check the number or try again.", "error");
-                    if (appVerifier) appVerifier.clear();
-                });
-        }
-
-        function createOTPInputs() {
-            const container = document.getElementById('otp-inputs');
+        // ========== M-PIN HELPER FUNCTIONS ==========
+        function createPinInputs(containerId, length = 6) {
+            const container = document.getElementById(containerId);
             container.innerHTML = '';
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < length; i++) {
                 const input = document.createElement('input');
-                input.type = 'tel';
+                input.type = 'password';
                 input.maxLength = 1;
-                input.className = 'otp-input';
+                input.className = 'pin-input';
                 input.addEventListener('input', () => {
-                    if (input.value.length === 1 && i < 5) container.children[i+1].focus();
-                    checkAutoVerifyOTP();
-                });
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Backspace' && !input.value && i > 0) container.children[i-1].focus();
+                    if (input.value && i < length - 1) {
+                        container.children[i + 1].focus();
+                    }
                 });
                 container.appendChild(input);
             }
-            setTimeout(() => container.children[0].focus(), 100);
         }
 
-        function checkAutoVerifyOTP() {
-            const inputs = document.querySelectorAll('#otp-inputs input');
-            if (Array.from(inputs).every(i => i.value.length === 1)) {
-                setTimeout(verifyRealOTP, 200);
+        function getPinValue(containerId) {
+            const inputs = document.getElementById(containerId).querySelectorAll('input');
+            return Array.from(inputs).map(i => i.value).join('');
+        }
+
+        function clearPinInputs(containerId) {
+            const inputs = document.getElementById(containerId).querySelectorAll('input');
+            inputs.forEach(i => i.value = '');
+        }
+
+        // ========== AUTH FLOW ==========
+        function showLoginScreen() {
+            document.getElementById('signup-card').classList.add('hidden');
+            document.getElementById('login-card').classList.remove('hidden');
+            createPinInputs('login-pin-inputs');
+        }
+
+        function showSignupScreen() {
+            document.getElementById('login-card').classList.add('hidden');
+            document.getElementById('signup-card').classList.remove('hidden');
+            createPinInputs('signup-pin-inputs');
+            createPinInputs('confirm-pin-inputs');
+        }
+
+        async function createAccountWithMPin() {
+            const storeName = document.getElementById('signup-store-name').value.trim();
+            const area = document.getElementById('signup-area').value.trim();
+            const mpin = getPinValue('signup-pin-inputs');
+            const confirmMpin = getPinValue('confirm-pin-inputs');
+
+            if (!storeName || !area) {
+                alert("Please fill Store Name and Area");
+                return;
             }
-        }
-
-        let otpTimer;
-        function startOTPTimer() {
-            const timerEl = document.getElementById('otp-timer');
-            let time = 120;
-            clearInterval(otpTimer);
-            otpTimer = setInterval(() => {
-                const m = Math.floor(time / 60);
-                const s = time % 60;
-                timerEl.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
-                time--;
-                if (time < 0) {
-                    clearInterval(otpTimer);
-                    timerEl.textContent = "Expired";
-                }
-            }, 1000);
-        }
-
-        function resendRealOTP() {
-            const phone = window.tempLoginData.phone;
-            const appVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
-            
-            auth.signInWithPhoneNumber(phone, appVerifier)
-                .then(result => {
-                    confirmationResult = result;
-                    showToast("New OTP sent to your phone", "success");
-                    startOTPTimer();
-                    document.querySelectorAll('#otp-inputs input').forEach(i => i.value = '');
-                })
-                .catch(err => showToast("Failed to resend OTP", "error"));
-        }
-
-        function verifyRealOTP() {
-            const inputs = document.querySelectorAll('#otp-inputs input');
-            const code = Array.from(inputs).map(i => i.value).join('');
-
-            if (code.length !== 6 || !confirmationResult) {
-                showToast("Please enter the 6-digit OTP", "error");
+            if (mpin.length !== 6 || confirmMpin.length !== 6) {
+                alert("Please enter 6-digit M-Pin in both fields");
+                return;
+            }
+            if (mpin !== confirmMpin) {
+                alert("M-Pin does not match. Please try again.");
                 return;
             }
 
-            confirmationResult.confirm(code)
-                .then(async (result) => {
-                    const user = result.user;
-                    const data = window.tempLoginData;
-
-                    // Create or update store in Firestore
-                    const storeRef = db.collection('stores').doc(user.uid);
-                    await storeRef.set({
-                        phone: data.phone,
-                        storeName: data.storeName,
-                        area: data.area,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-
-                    currentUser = {
-                        uid: user.uid,
-                        phone: data.phone,
-                        storeName: data.storeName,
-                        area: data.area
-                    };
-
-                    localStorage.setItem('grabit_firebase_user', JSON.stringify(currentUser));
-
-                    clearInterval(otpTimer);
-                    document.getElementById('login-screen').classList.add('hidden');
-                    document.getElementById('main-app').classList.remove('hidden');
-
-                    await loadInventoryFromCloud();
-                    initAppUI();
-                    showToast("Login successful! Data synced from cloud.", "success");
-                })
-                .catch((error) => {
-                    console.error(error);
-                    showToast("Invalid OTP. Please try again.", "error");
+            try {
+                // Create new store document
+                const docRef = await db.collection('stores').add({
+                    storeName: storeName,
+                    area: area,
+                    mpin: mpin,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+
+                currentStore = {
+                    id: docRef.id,
+                    storeName: storeName,
+                    area: area,
+                    mpin: mpin
+                };
+
+                localStorage.setItem('grabit_current_store', JSON.stringify(currentStore));
+                
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                
+                initMainApp();
+                alert("Account created successfully! Your M-Pin is set.");
+            } catch (error) {
+                console.error(error);
+                alert("Failed to create account. Please try again.");
+            }
         }
 
-        function goBackToPhoneStep() {
-            clearInterval(otpTimer);
-            document.getElementById('otp-step').classList.add('hidden');
-            document.getElementById('phone-step').classList.remove('hidden');
-            confirmationResult = null;
+        async function loginWithMPin() {
+            const mpin = getPinValue('login-pin-inputs');
+            
+            if (mpin.length !== 6) {
+                alert("Please enter your 6-digit M-Pin");
+                return;
+            }
+
+            try {
+                const snapshot = await db.collection('stores').where('mpin', '==', mpin).get();
+                
+                if (snapshot.empty) {
+                    alert("Invalid M-Pin. Please try again or create a new account.");
+                    return;
+                }
+
+                // Take the first matching store
+                const doc = snapshot.docs[0];
+                currentStore = {
+                    id: doc.id,
+                    ...doc.data()
+                };
+
+                localStorage.setItem('grabit_current_store', JSON.stringify(currentStore));
+
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                
+                initMainApp();
+            } catch (error) {
+                console.error(error);
+                alert("Login failed. Please try again.");
+            }
         }
 
-        // ========== CLOUD FUNCTIONS ==========
-        async function loadInventoryFromCloud() {
-            if (!currentUser || !currentUser.uid) return;
+        // ========== MAIN APP ==========
+        function initMainApp() {
+            if (!currentStore) return;
+
+            document.getElementById('header-store-name').innerText = currentStore.storeName;
+            document.getElementById('header-area').innerText = currentStore.area;
+
+            loadInventory();
+        }
+
+        async function loadInventory() {
+            if (!currentStore) return;
 
             try {
                 const snapshot = await db.collection('inventory')
-                    .where('storeId', '==', currentUser.uid)
+                    .where('storeId', '==', currentStore.id)
                     .orderBy('lastUpdated', 'desc')
                     .get();
 
@@ -543,156 +388,100 @@
                     inventory.push({ id: doc.id, ...doc.data() });
                 });
 
-                if (inventory.length === 0) {
-                    // Seed with sample data for first time
-                    for (const item of sampleInventory) {
-                        await addItemToCloud(item);
-                    }
-                    await loadInventoryFromCloud(); // reload after seeding
-                }
+                renderInventory();
+                updateStats();
             } catch (error) {
-                console.error("Error loading from cloud:", error);
-                showToast("Could not load cloud data. Using local backup if available.", "error");
+                console.error("Error loading inventory:", error);
             }
         }
 
-        async function addItemToCloud(itemData) {
-            if (!currentUser) return null;
-            try {
-                const docRef = await db.collection('inventory').add({
-                    ...itemData,
-                    storeId: currentUser.uid,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                return docRef.id;
-            } catch (e) {
-                console.error(e);
-                return null;
-            }
-        }
-
-        async function updateItemInCloud(id, updates) {
-            try {
-                await db.collection('inventory').doc(id).update({
-                    ...updates,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (e) { console.error(e); }
-        }
-
-        async function deleteItemFromCloud(id) {
-            try {
-                await db.collection('inventory').doc(id).delete();
-            } catch (e) { console.error(e); }
-        }
-
-        async function syncToCloud() {
-            showToast("Syncing with Grabit cloud...", "success", 1500);
-            // In this setup, changes are already saved to cloud in real-time
-            // This button can force a refresh
-            await loadInventoryFromCloud();
-            renderInventory();
-            updateMetrics();
-            showToast("Everything is up to date in the cloud!", "success");
-        }
-
-        // ========== UI & INVENTORY FUNCTIONS ==========
-        function initAppUI() {
-            document.getElementById('header-store-name').innerHTML = currentUser.storeName;
-            document.getElementById('header-area').innerHTML = currentUser.area;
-            renderInventory();
-            updateMetrics();
-        }
-
-        function renderInventory(filtered = null) {
+        function renderInventory(filteredItems = null) {
             const grid = document.getElementById('inventory-grid');
             grid.innerHTML = '';
-            let items = filtered || inventory;
+            let items = filteredItems || inventory;
 
-            if (currentFilter !== 'all') {
-                items = items.filter(i => i.category === currentFilter);
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            if (searchTerm) {
+                items = items.filter(item => 
+                    item.name.toLowerCase().includes(searchTerm) || 
+                    item.category.toLowerCase().includes(searchTerm)
+                );
             }
-            const search = document.getElementById('search-input').value.toLowerCase();
-            if (search) {
-                items = items.filter(i => i.name.toLowerCase().includes(search) || i.category.toLowerCase().includes(search));
-            }
-
-            document.getElementById('inventory-count').innerHTML = `${items.length} items`;
 
             if (items.length === 0) {
-                document.getElementById('empty-state').classList.remove('hidden');
+                grid.innerHTML = `<div class="col-span-full text-center py-8 text-zinc-400">No items found</div>`;
                 return;
             }
-            document.getElementById('empty-state').classList.add('hidden');
 
             items.forEach(item => {
                 const isLow = item.qty <= (item.threshold || 5);
                 const card = document.createElement('div');
-                card.className = `inventory-card bg-white border border-zinc-100 rounded-3xl p-4 flex flex-col ${isLow ? 'stock-low border-red-200' : 'stock-ok'}`;
-                
+                card.className = `inventory-card bg-white border rounded-3xl p-4 ${isLow ? 'border-red-300' : 'border-zinc-200'}`;
+
                 card.innerHTML = `
                     <div class="flex justify-between mb-3">
-                        <div class="flex gap-3">
-                            <div class="item-icon ${getCategoryColor(item.category)}">${getCategoryIcon(item.category)}</div>
-                            <div>
-                                <div class="font-semibold text-[15px]">${item.name}</div>
-                                <div class="text-xs text-zinc-500">${item.category}</div>
-                            </div>
+                        <div>
+                            <div class="font-semibold">${item.name}</div>
+                            <div class="text-xs text-zinc-500">${item.category}</div>
                         </div>
-                        ${isLow ? `<div class="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full self-start">LOW</div>` : ''}
+                        ${isLow ? `<div class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full">LOW</div>` : ''}
                     </div>
-                    <div class="flex items-baseline gap-1 mb-1">
-                        <span class="qty-badge text-emerald-700">${item.qty}</span>
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-3xl font-bold text-emerald-700">${item.qty}</span>
                         <span class="text-sm text-zinc-500">${item.unit}</span>
                     </div>
-                    ${item.price ? `<div class="text-xs text-zinc-400">₹${item.price}</div>` : ''}
-                    <div class="mt-auto pt-3 flex justify-between items-center text-xs">
-                        <div class="text-zinc-400">Updated just now</div>
+                    <div class="mt-3 flex justify-between items-center">
+                        <div class="text-xs text-zinc-400">${item.price ? '₹' + item.price : ''}</div>
                         <div class="flex gap-1">
-                            <button onclick="event.stopImmediatePropagation(); adjustQty('${item.id}', -1)" class="w-7 h-7 bg-zinc-100 rounded-xl flex items-center justify-center"><i class="fa-solid fa-minus text-xs"></i></button>
-                            <button onclick="event.stopImmediatePropagation(); adjustQty('${item.id}', 1)" class="w-7 h-7 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center"><i class="fa-solid fa-plus text-xs"></i></button>
-                            <button onclick="event.stopImmediatePropagation(); editItem('${item.id}')" class="px-2 text-emerald-600 text-xs font-medium">Edit</button>
-                            <button onclick="event.stopImmediatePropagation(); deleteItem('${item.id}', '${item.name}')" class="w-7 h-7 text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-xs"></i></button>
+                            <button onclick="event.stopImmediatePropagation(); adjustQuantity('${item.id}', -1)" class="w-8 h-8 bg-zinc-100 rounded-xl flex items-center justify-center">-</button>
+                            <button onclick="event.stopImmediatePropagation(); adjustQuantity('${item.id}', 1)" class="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center">+</button>
+                            <button onclick="event.stopImmediatePropagation(); editItem('${item.id}')" class="px-3 text-xs text-emerald-600">Edit</button>
                         </div>
                     </div>
                 `;
-                card.onclick = () => editItem(item.id);
                 grid.appendChild(card);
             });
         }
 
-        function getCategoryIcon(cat) {
-            const icons = { 'Staples': '🌾', 'Dairy': '🥛', 'Snacks': '🍪', 'Beverages': '🥤', 'Personal Care': '🧴', 'Household': '🏠', 'Spices': '🌶️', 'Other': '📦' };
-            return icons[cat] || '📦';
-        }
-        function getCategoryColor(cat) {
-            const colors = { 'Staples': 'bg-amber-100', 'Dairy': 'bg-blue-100', 'Snacks': 'bg-orange-100', 'Beverages': 'bg-purple-100', 'Personal Care': 'bg-pink-100', 'Household': 'bg-teal-100', 'Spices': 'bg-red-100', 'Other': 'bg-zinc-100' };
-            return colors[cat] || 'bg-zinc-100';
-        }
-
-        function filterByCategory(cat) {
-            currentFilter = cat;
-            document.querySelectorAll('.category-chip').forEach(el => el.classList.remove('active', 'bg-emerald-600', 'text-white'));
-            document.getElementById(cat === 'all' ? 'cat-all' : `cat-${cat}`).classList.add('active', 'bg-emerald-600', 'text-white');
+        function filterInventory() {
             renderInventory();
         }
 
-        function filterInventory() { renderInventory(); }
+        function updateStats() {
+            document.getElementById('stat-total').innerText = inventory.length;
+            const lowStock = inventory.filter(i => i.qty <= (i.threshold || 5)).length;
+            document.getElementById('stat-low').innerText = lowStock;
+            document.getElementById('stat-updated').innerText = 'Just now';
+        }
 
-        async function adjustQty(id, delta) {
-            const item = inventory.find(i => i.id === id);
-            if (!item) return;
-            item.qty = Math.max(0, item.qty + delta);
-            await updateItemInCloud(id, { qty: item.qty });
-            renderInventory();
-            updateMetrics();
+        async function adjustQuantity(id, delta) {
+            const itemIndex = inventory.findIndex(i => i.id === id);
+            if (itemIndex === -1) return;
+
+            inventory[itemIndex].qty = Math.max(0, inventory[itemIndex].qty + delta);
+
+            try {
+                await db.collection('inventory').doc(id).update({
+                    qty: inventory[itemIndex].qty,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                renderInventory();
+                updateStats();
+            } catch (error) {
+                console.error(error);
+            }
         }
 
         function showAddModal() {
-            editingItemId = null;
             document.getElementById('modal-title').innerText = 'Add New Item';
-            document.getElementById('modal-save-btn').innerText = 'Add to Inventory';
-            // reset fields...
+            document.getElementById('modal-save-btn').innerText = 'Add Item';
+            document.getElementById('modal-save-btn').onclick = saveNewItem;
+            
+            // Clear fields
+            document.getElementById('modal-name').value = '';
+            document.getElementById('modal-qty').value = '10';
+            document.getElementById('modal-price').value = '45';
+            
             document.getElementById('item-modal').classList.remove('hidden');
             document.getElementById('item-modal').classList.add('flex');
         }
@@ -700,151 +489,91 @@
         function editItem(id) {
             const item = inventory.find(i => i.id === id);
             if (!item) return;
-            editingItemId = id;
+
             document.getElementById('modal-title').innerText = 'Edit Item';
             document.getElementById('modal-save-btn').innerText = 'Save Changes';
-            // fill fields...
+            document.getElementById('modal-save-btn').onclick = () => updateItem(id);
+
             document.getElementById('modal-category').value = item.category;
             document.getElementById('modal-name').value = item.name;
             document.getElementById('modal-qty').value = item.qty;
             document.getElementById('modal-unit').value = item.unit;
             document.getElementById('modal-price').value = item.price || '';
-            document.getElementById('modal-threshold').value = item.threshold || 5;
-            document.getElementById('modal-notes').value = item.notes || '';
+
             document.getElementById('item-modal').classList.remove('hidden');
             document.getElementById('item-modal').classList.add('flex');
         }
 
-        async function saveItemToCloud() {
-            const data = {
+        async function saveNewItem() {
+            const data = getItemFormData();
+            if (!data.name) {
+                alert("Item name is required");
+                return;
+            }
+
+            try {
+                await db.collection('inventory').add({
+                    ...data,
+                    storeId: currentStore.id,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                hideModal();
+                await loadInventory();
+            } catch (error) {
+                alert("Failed to save item");
+            }
+        }
+
+        async function updateItem(id) {
+            const data = getItemFormData();
+            try {
+                await db.collection('inventory').doc(id).update({
+                    ...data,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                hideModal();
+                await loadInventory();
+            } catch (error) {
+                alert("Failed to update item");
+            }
+        }
+
+        function getItemFormData() {
+            return {
                 category: document.getElementById('modal-category').value,
                 name: document.getElementById('modal-name').value.trim(),
                 qty: parseInt(document.getElementById('modal-qty').value) || 0,
                 unit: document.getElementById('modal-unit').value,
                 price: parseFloat(document.getElementById('modal-price').value) || null,
-                threshold: parseInt(document.getElementById('modal-threshold').value) || 5,
-                notes: document.getElementById('modal-notes').value.trim()
+                threshold: 5
             };
-
-            if (!data.name) { showToast("Item name is required", "error"); return; }
-
-            if (editingItemId) {
-                await updateItemInCloud(editingItemId, data);
-                showToast("Item updated in cloud", "success");
-            } else {
-                const newId = await addItemToCloud(data);
-                if (newId) showToast("Item added to cloud", "success");
-            }
-
-            hideModal();
-            await loadInventoryFromCloud();
-            renderInventory();
-            updateMetrics();
         }
 
-        async function deleteItem(id, name) {
-            if (!confirm(`Delete "${name}"?`)) return;
-            await deleteItemFromCloud(id);
-            inventory = inventory.filter(i => i.id !== id);
-            renderInventory();
-            updateMetrics();
-            showToast("Item deleted from cloud", "success");
-        }
-
-        function updateMetrics() {
-            document.getElementById('metric-total').innerText = inventory.length;
-            const low = inventory.filter(i => i.qty <= (i.threshold || 5)).length;
-            document.getElementById('metric-low').innerText = low;
+        function hideModal() {
+            document.getElementById('item-modal').classList.remove('flex');
+            document.getElementById('item-modal').classList.add('hidden');
         }
 
         function showProfile() {
-            // Similar to before, with export/import + logout
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/60 z-[80] flex items-end md:items-center justify-center';
-            modal.innerHTML = `
-                <div class="bg-white w-full md:w-[400px] md:rounded-3xl rounded-t-3xl p-6">
-                    <div class="flex justify-between mb-6">
-                        <div><div class="font-semibold text-2xl">${currentUser.storeName}</div><div class="text-emerald-600">${currentUser.area}</div></div>
-                        <div class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full self-start">Verified</div>
-                    </div>
-                    <div class="text-sm space-y-3 mb-6">
-                        <div class="flex justify-between"><span class="text-zinc-500">Phone</span> <span>${currentUser.phone}</span></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <button onclick="exportInventoryJSON(); this.closest('.fixed').remove()" class="py-3 border border-emerald-200 rounded-2xl text-emerald-700">Export Backup</button>
-                        <button onclick="importInventoryJSON(); this.closest('.fixed').remove()" class="py-3 border border-emerald-200 rounded-2xl text-emerald-700">Import Backup</button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="this.closest('.fixed').remove()" class="py-3 border rounded-2xl">Close</button>
-                        <button onclick="logout(); this.closest('.fixed').remove()" class="py-3 bg-red-50 text-red-600 rounded-2xl">Logout</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
+            if (!currentStore) return;
+            alert(`Store: ${currentStore.storeName}\nArea: ${currentStore.area}\n\nM-Pin is set and saved securely.`);
         }
 
-        function logout() {
-            auth.signOut();
-            localStorage.removeItem('grabit_firebase_user');
-            window.location.reload();
-        }
-
-        function showToast(msg, type = 'success', duration = 2800) {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `px-5 py-3.5 rounded-2xl shadow-xl text-white text-sm max-w-xs mx-auto flex items-center gap-3 ${type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`;
-            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${msg}</span>`;
-            container.appendChild(toast);
-            setTimeout(() => { toast.style.transition = 'all 0.3s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, duration);
-        }
-
-        function exportToCSV() { /* similar to previous version */ showToast("CSV exported (demo)"); }
-        function exportInventoryJSON() { /* similar */ showToast("JSON backup downloaded"); }
-        function importInventoryJSON() { /* similar */ showToast("Import feature ready"); }
-
-        function switchTab(tab) { /* same as before */ }
-
-        function filterByCategory(cat) { /* implemented above */ }
-
-        async function initApp() {
-            // Check for existing session
-            const saved = localStorage.getItem('grabit_firebase_user');
-            if (saved) {
-                currentUser = JSON.parse(saved);
-                // Verify with Firebase
-                auth.onAuthStateChanged(async (user) => {
-                    if (user && user.uid === currentUser.uid) {
-                        document.getElementById('login-screen').classList.add('hidden');
-                        document.getElementById('main-app').classList.remove('hidden');
-                        await loadInventoryFromCloud();
-                        initAppUI();
-                    } else {
-                        localStorage.removeItem('grabit_firebase_user');
-                    }
-                });
+        // Initialize
+        function initializeApp() {
+            // Check if already logged in
+            const savedStore = localStorage.getItem('grabit_current_store');
+            if (savedStore) {
+                currentStore = JSON.parse(savedStore);
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                initMainApp();
+            } else {
+                createPinInputs('login-pin-inputs');
             }
         }
 
-        function initializeEverything() {
-            initTailwind();
-            
-            // Add invisible recaptcha container for Firebase
-            const recaptcha = document.createElement('div');
-            recaptcha.id = 'recaptcha-container';
-            recaptcha.style.display = 'none';
-            document.body.appendChild(recaptcha);
-
-            initApp();
-            
-            // Auto login if already authenticated
-            auth.onAuthStateChanged((user) => {
-                if (user && localStorage.getItem('grabit_firebase_user')) {
-                    // Already handled in initApp
-                }
-            });
-        }
-
-        window.onload = initializeEverything;
+        window.onload = initializeApp;
     </script>
 </body>
 </html>
